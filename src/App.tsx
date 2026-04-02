@@ -5,7 +5,7 @@ import { WeaponSearch } from './components/WeaponSearch';
 import { PerkSelector } from './components/PerkSelector';
 import { WishlistManager } from './components/WishlistManager';
 import type { WishlistEntry } from './components/WishlistManager';
-import { PlusCircle, Database, Check } from 'lucide-react';
+import { PlusCircle, Database, Check, Layout, ListChecks } from 'lucide-react';
 import './index.css';
 
 function App() {
@@ -125,10 +125,7 @@ function App() {
         fileName = 'destiny2_wishlist.txt';
       }
 
-      if (!content) {
-        console.error('Export failed: No content generated.');
-        return;
-      }
+      if (!content) return;
       
       const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
       const url = URL.createObjectURL(blob);
@@ -138,19 +135,17 @@ function App() {
       document.body.appendChild(link);
       link.click();
       
-      // Cleanup
       setTimeout(() => {
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
       }, 100);
     } catch (err) {
       console.error('Export Error:', err);
-      alert('Der Export ist fehlgeschlagen. Bitte versuche es erneut.');
+      alert('Der Export ist fehlgeschlagen.');
     }
   };
 
   const handleImport = (entries: WishlistEntry[]) => {
-    // Basic merge strategy for internal-only imports
     setWishlistEntries(prev => {
       const combined = [...prev];
       for (const entry of entries) {
@@ -182,9 +177,6 @@ function App() {
         <p style={{ marginTop: '0.5rem', color: 'var(--text-secondary)' }}>
           Step 1: Finding latest data paths... {progress > 0 ? '(Downloading)' : ''}
         </p>
-        <p style={{ marginTop: '0.2rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          This requires downloading ~20MB of item definitions. Caching will make next loads instant.
-        </p>
       </div>
     );
   }
@@ -204,13 +196,24 @@ function App() {
   return (
     <div className="container">
       <header className="app-header">
-        <h1 className="app-title">Destiny 2 Wishlist Generator</h1>
-        <p className="app-subtitle">Select your favorite weapons, build your god rolls, and export for DIM.</p>
+        <div className="header-top">
+          <div>
+            <h1 className="app-title">Wishlist Generator</h1>
+            <p className="app-subtitle">Destiny 2 God-Roll Creator</p>
+          </div>
+          <div className="header-search">
+             <WeaponSearch items={items} searchIndex={searchIndex} onSelect={handleSelectWeapon} />
+          </div>
+        </div>
       </header>
 
-      <div className="grid-2">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <WeaponSearch items={items} searchIndex={searchIndex} onSelect={handleSelectWeapon} />
+      <main className="main-layout">
+        {/* LEFT COLUMN: MANAGER */}
+        <section className="column-left">
+          <div className="section-header">
+            <ListChecks size={20} />
+            <h2>My Wishlist</h2>
+          </div>
           <WishlistManager 
             entries={wishlistEntries}
             items={items}
@@ -219,11 +222,17 @@ function App() {
             onRemove={(index) => setWishlistEntries(prev => prev.filter((_, i) => i !== index))}
             onSelectEntry={handleSelectEntry}
           />
-        </div>
+        </section>
 
-        <div>
+        {/* RIGHT COLUMN: PERKS & SAVE */}
+        <section className="column-right">
           {selectedWeapon ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div className="section-header">
+                <Layout size={20} />
+                <h2>Perk Configuration</h2>
+              </div>
+              
               <PerkSelector 
                 weapon={selectedWeapon}
                 items={items}
@@ -234,17 +243,17 @@ function App() {
               />
               
               <div className="card glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <h3 className="card-title">Save Roll</h3>
+                <h3 className="card-title">Save God-Roll</h3>
                 <input 
                   type="text" 
                   className="input-primary" 
-                  placeholder="Notes (e.g. PvP God Roll, Best for Raids)" 
+                  placeholder="Notes (e.g. PvP, Raid, etc.)" 
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                 />
                 <div style={{ display: 'flex', gap: '1rem' }}>
                   <button className="btn-primary" onClick={handleSaveEntry} style={{ flex: 1, justifyContent: 'center' }}>
-                    {editingIndex !== null ? <><Check size={18} /> Update Wishlist Entry</> : <><PlusCircle size={18} /> Add to Wishlist</>}
+                    {editingIndex !== null ? <><Check size={18} /> Update Entry</> : <><PlusCircle size={18} /> Add to List</>}
                   </button>
                   <button className="btn-secondary" onClick={() => { setSelectedWeapon(null); setEditingIndex(null); }} style={{ flex: 1, justifyContent: 'center' }}>
                     Cancel
@@ -253,13 +262,14 @@ function App() {
               </div>
             </div>
           ) : (
-            <div className="card glass-panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', opacity: 0.7, textAlign: 'center' }}>
-              <Database size={48} style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }} />
-              <p style={{ color: 'var(--text-secondary)' }}>Search and select a weapon to configure its perks.</p>
+            <div className="card glass-panel empty-state">
+              <Database size={48} style={{ marginBottom: '1rem' }} />
+              <h3>Choose a weapon</h3>
+              <p>Search in the header to start building your wishlist entries.</p>
             </div>
           )}
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
   );
 }

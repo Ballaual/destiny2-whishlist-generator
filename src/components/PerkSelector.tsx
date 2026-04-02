@@ -32,19 +32,21 @@ const IGNORE_CATEGORY_HASHES = [
 ];
 
 export function PerkSelector({ weapon, items, plugSets, socketCategories, selectedPerks, onTogglePerk }: PerkSelectorProps) {
-  if (!weapon.sockets) {
+  if (!weapon || !weapon.sockets) {
     return <div className="card glass-panel"><p>This weapon has no configurable perks.</p></div>;
   }
 
   const isEnhancedPerk = (item: DestinyItemDefinition) => {
-    if (!item.displayProperties) return false;
-    const name = item.displayProperties.name;
+    if (!item || !item.displayProperties) return false;
+    const name = item.displayProperties.name || '';
     const isEnhancedName = name.includes('Enhanced') || name.includes('Verbesserter') || name.includes('Verbesserte') || name.includes('Verbessertes');
     const hasEnhancedCategory = item.itemCategoryHashes?.includes(2237026461);
     return isEnhancedName || hasEnhancedCategory;
   };
 
   const getPlugsForSocket = (entry: any) => {
+    if (!entry) return [];
+    
     let plugHashes: number[] = [];
     if (entry.randomizedPlugSetHash) {
       plugHashes = plugSets[entry.randomizedPlugSetHash]?.reusablePlugItems.map(p => p.plugItemHash) || [];
@@ -56,9 +58,9 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
     
     return plugHashes
       .map(hash => items[hash])
-      .filter(item => {
+      .filter((item): item is DestinyItemDefinition => {
         if (!item || !item.displayProperties) return false;
-        const name = item.displayProperties.name;
+        const name = item.displayProperties.name || '';
         // Filter out obviously non-perk items
         if (name === 'Empty Mod Socket' || name === 'Default Shader' || name === 'Kill Tracker' || name.includes('Ornament')) return false;
         // Hide shaders specifically
@@ -68,47 +70,53 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
   };
 
   const validSocketIndices: number[] = [];
-  weapon.sockets.socketCategories.forEach(cat => {
-    const isWhitelisted = PERK_CATEGORY_HASHES.includes(cat.socketCategoryHash);
-    const isBlacklisted = IGNORE_CATEGORY_HASHES.includes(cat.socketCategoryHash);
-    
-    // Fallback: If not explicitly blacklisted, check the name for keywords
-    const catDef = socketCategories[cat.socketCategoryHash];
-    const catName = (catDef?.displayProperties?.name || '').toUpperCase();
-    const hasPerkKeyword = 
-      catName.includes('PERK') || 
-      catName.includes('TRAIT') || 
-      catName.includes('EIGENSCHAFT') || 
-      catName.includes('MAGAZIN') || 
-      catName.includes('LAUF') || 
-      catName.includes('MUZZLE') || 
-      catName.includes('FRAME') || 
-      catName.includes('GEHÄUSE') || 
-      catName.includes('PLUG') ||
-      catName.includes('ORIGIN');
+  if (weapon.sockets.socketCategories) {
+    weapon.sockets.socketCategories.forEach(cat => {
+      const catHash = cat.socketCategoryHash;
+      if (!catHash) return;
+      
+      const isWhitelisted = PERK_CATEGORY_HASHES.includes(catHash);
+      const isBlacklisted = IGNORE_CATEGORY_HASHES.includes(catHash);
+      
+      const catDef = socketCategories[catHash];
+      const catName = (catDef?.displayProperties?.name || '').toUpperCase();
+      
+      const hasPerkKeyword = 
+        catName.includes('PERK') || 
+        catName.includes('TRAIT') || 
+        catName.includes('EIGENSCHAFT') || 
+        catName.includes('MAGAZIN') || 
+        catName.includes('LAUF') || 
+        catName.includes('MUZZLE') || 
+        catName.includes('FRAME') || 
+        catName.includes('GEHÄUSE') || 
+        catName.includes('PLUG') ||
+        catName.includes('ORIGIN');
 
-    if ((isWhitelisted || hasPerkKeyword) && !isBlacklisted) {
-        validSocketIndices.push(...cat.socketIndices);
-    }
-  });
+      if ((isWhitelisted || hasPerkKeyword) && !isBlacklisted) {
+          validSocketIndices.push(...cat.socketIndices);
+      }
+    });
+  }
 
   const perkColumns = validSocketIndices
     .map(idx => ({ index: idx, plugs: getPlugsForSocket(weapon.sockets!.socketEntries[idx]) }))
     .filter(col => col.plugs.length > 0);
 
   if (perkColumns.length === 0) {
-    // Debug fallback: if everything was filtered, let's see what categories we had
-    const availableCats = weapon.sockets.socketCategories.map(c => {
+    const availableCats = weapon.sockets.socketCategories?.map(c => {
         const def = socketCategories[c.socketCategoryHash];
         return `${def?.displayProperties?.name || 'Unknown'} (${c.socketCategoryHash})`;
-    }).join(', ');
+    }).join(', ') || 'None';
 
     return (
       <div className="card glass-panel">
         <p>No perk variations available for this weapon.</p>
-        <p style={{ fontSize: '0.75rem', marginTop: '1rem', color: 'var(--text-secondary)' }}>
-          Found categories: {availableCats}
-        </p>
+        {availableCats !== 'None' && (
+          <p style={{ fontSize: '0.75rem', marginTop: '1rem', color: 'var(--text-secondary)' }}>
+            Found categories: {availableCats}
+          </p>
+        )}
       </div>
     );
   }
@@ -122,26 +130,29 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
         {perkColumns.map((col, colIdx) => (
           <div key={`${col.index}-${colIdx}`} className="perk-column">
             {col.plugs.map(perk => {
+              if (!perk) return null;
+              
               const isSelected = selectedPerks.has(perk.hash);
               const isEnhanced = isEnhancedPerk(perk);
-              const isMw = perk.displayProperties.name.toLowerCase().includes('masterwork') || perk.itemType === 19;
+              const perkName = perk.displayProperties?.name || '';
+              const isMw = perkName.toLowerCase().includes('masterwork') || perk.itemType === 19;
               
               return (
                 <button
                   key={perk.hash}
                   className={`perk-item ${isSelected ? 'selected' : ''} ${isMw ? 'masterwork' : ''} ${isEnhanced ? 'perk-enhanced' : ''}`}
                   onClick={() => onTogglePerk(perk.hash)}
-                  title={perk.displayProperties.name}
+                  title={perkName}
                 >
-                  {perk.displayProperties.hasIcon && (
+                  {perk.displayProperties?.hasIcon && (
                     <img 
                       src={`https://www.bungie.net${perk.displayProperties.icon}`} 
-                      alt={perk.displayProperties.name} 
+                      alt={perkName} 
                     />
                   )}
                   {isEnhanced && <div className="enhanced-badge"><Star size={10} fill="#eab308" /></div>}
                   <div className="perk-tooltip">
-                    <strong>{perk.displayProperties.name}</strong>
+                    <strong>{perkName}</strong>
                     {isEnhanced && <div style={{ color: '#eab308', fontSize: '0.7rem' }}>Enhanced</div>}
                   </div>
                 </button>
