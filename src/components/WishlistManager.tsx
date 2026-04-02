@@ -1,4 +1,5 @@
-import { Trash2, Download, Upload, FileText, Code, Smartphone, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
+import { Trash2, Download, Upload, FileText, Code, Smartphone, ChevronRight, Check } from 'lucide-react';
 import type { DestinyItemDefinition } from '../lib/manifest';
 
 export interface WishlistEntry {
@@ -23,6 +24,8 @@ interface WishlistManagerProps {
 }
 
 export function WishlistManager({ entries, items, lang, onExport, onImport, onRemove, onSelectEntry, labels }: WishlistManagerProps) {
+  const [exportFormat, setExportFormat] = useState('dim');
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -44,6 +47,12 @@ export function WishlistManager({ entries, items, lang, onExport, onImport, onRe
     };
     reader.readAsText(file);
   };
+
+  const formats = [
+    { id: 'dim', name: 'DIM', icon: <FileText size={14} /> },
+    { id: 'internal', name: 'JSON', icon: <Code size={14} /> },
+    { id: 'littlelight', name: 'Little Light', icon: <Smartphone size={14} /> },
+  ];
 
   return (
     <div className="wishlist-manager" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', height: '100%' }}>
@@ -100,20 +109,37 @@ export function WishlistManager({ entries, items, lang, onExport, onImport, onRe
            {lang === 'de' ? 'Format wählen' : 'Choose Format'}
         </div>
         
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-          <button className="btn-secondary" onClick={() => onExport('internal')} style={{ fontSize: '0.8rem', padding: '0.6rem' }}>
-            <Code size={14} /> JSON
-          </button>
-          <button className="btn-secondary" onClick={() => onExport('dim')} style={{ fontSize: '0.8rem', padding: '0.6rem' }}>
-            <FileText size={14} /> DIM
-          </button>
-          <button className="btn-secondary" onClick={() => onExport('littlelight')} style={{ gridColumn: 'span 2', fontSize: '0.8rem', padding: '0.6rem' }}>
-            <Smartphone size={14} /> Little Light
-          </button>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+          {formats.map((f) => (
+            <button 
+              key={f.id}
+              className={`btn-secondary ${exportFormat === f.id ? 'active' : ''}`} 
+              onClick={() => setExportFormat(f.id)}
+              style={{ 
+                fontSize: '0.75rem', 
+                padding: '0.5rem', 
+                border: exportFormat === f.id ? '1px solid var(--accent-color)' : '1px solid var(--panel-border)',
+                background: exportFormat === f.id ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255,255,255,0.02)',
+                gridColumn: f.id === 'littlelight' ? 'span 2' : 'span 1',
+                position: 'relative'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {f.icon}
+                {f.name}
+              </div>
+              {exportFormat === f.id && <Check size={12} style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--accent-color)' }} />}
+            </button>
+          ))}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.5rem' }}>
-          <button className="btn-primary" onClick={() => onExport('dim')} style={{ fontSize: '0.85rem' }}>
+          <button 
+            className="btn-primary" 
+            onClick={() => onExport(exportFormat)} 
+            style={{ fontSize: '0.85rem' }}
+            disabled={entries.length === 0}
+          >
             <Download size={16} /> {labels.exportBtn}
           </button>
           <label className="btn-secondary" style={{ cursor: 'pointer', fontSize: '0.85rem' }}>
@@ -125,3 +151,4 @@ export function WishlistManager({ entries, items, lang, onExport, onImport, onRe
     </div>
   );
 }
+

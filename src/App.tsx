@@ -90,23 +90,31 @@ function IntroView({ t }: { t: any }) {
       
       <div className="welcome-grid">
         <div className="card glass-panel welcome-card">
-          <div className="welcome-card-icon"><Search size={24} /></div>
-          <h3>{t.step1Title}</h3>
+          <div className="welcome-card-header">
+            <div className="welcome-card-icon"><Search size={24} /></div>
+            <h3>{t.step1Title}</h3>
+          </div>
           <p>{t.step1Desc}</p>
         </div>
         <div className="card glass-panel welcome-card">
-          <div className="welcome-card-icon"><MousePointer2 size={24} /></div>
-          <h3>{t.step2Title}</h3>
+          <div className="welcome-card-header">
+            <div className="welcome-card-icon"><MousePointer2 size={24} /></div>
+            <h3>{t.step2Title}</h3>
+          </div>
           <p>{t.step2Desc}</p>
         </div>
         <div className="card glass-panel welcome-card">
-          <div className="welcome-card-icon"><Save size={24} /></div>
-          <h3>{t.step3Title}</h3>
+          <div className="welcome-card-header">
+            <div className="welcome-card-icon"><Save size={24} /></div>
+            <h3>{t.step3Title}</h3>
+          </div>
           <p>{t.step3Desc}</p>
         </div>
         <div className="card glass-panel welcome-card">
-          <div className="welcome-card-icon"><FileOutput size={24} /></div>
-          <h3>{t.step4Title}</h3>
+          <div className="welcome-card-header">
+            <div className="welcome-card-icon"><FileOutput size={24} /></div>
+            <h3>{t.step4Title}</h3>
+          </div>
           <p>{t.step4Desc}</p>
         </div>
       </div>
