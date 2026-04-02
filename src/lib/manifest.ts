@@ -1,8 +1,8 @@
 import localforage from 'localforage';
 
 const MANIFEST_URLS = {
-  items: 'https://unpkg.com/@d2api/manifest-data@latest/json/DestinyInventoryItemLiteDefinition.json',
-  plugSets: 'https://unpkg.com/@d2api/manifest-data@latest/json/DestinyPlugSetDefinition.json'
+  items: 'https://cdn.jsdelivr.net/npm/@d2api/manifest-data@latest/json/DestinyInventoryItemLiteDefinition.json',
+  plugSets: 'https://cdn.jsdelivr.net/npm/@d2api/manifest-data@latest/json/DestinyPlugSetDefinition.json'
 };
 
 export const manifestCache = localforage.createInstance({
@@ -54,42 +54,50 @@ export interface DestinyPlugSetDefinition {
 }
 
 export async function fetchWithProgress(url: string, onProgress?: (progress: number) => void): Promise<any> {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  
-  const contentLength = response.headers.get('content-length');
-  const total = contentLength ? parseInt(contentLength, 10) : 0;
-  
-  if (total === 0 || !response.body) {
-    // Fallback if no content-length
-    const data = await response.json();
-    if (onProgress) onProgress(100);
-    return data;
-  }
+    try {
+        const response = await fetch(url, { mode: 'cors', cache: 'no-cache' });
+        if (!response.ok) {
+            throw new Error(`Bungie API is responding with error ${response.status}: ${response.statusText}`);
+        }
+        
+        const contentLength = response.headers.get('content-length');
+        const total = contentLength ? parseInt(contentLength, 10) : 0;
+        
+        if (total === 0 || !response.body) {
+            const data = await response.json();
+            if (onProgress) onProgress(100);
+            return data;
+        }
 
-  const reader = response.body.getReader();
-  let received = 0;
-  const chunks: Uint8Array[] = [];
+        const reader = response.body.getReader();
+        let received = 0;
+        const chunks: Uint8Array[] = [];
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      received += value.length;
-      if (onProgress) onProgress((received / total) * 100);
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (value) {
+                chunks.push(value);
+                received += value.length;
+                if (onProgress) onProgress((received / total) * 100);
+            }
+        }
+
+        const chunksAll = new Uint8Array(received);
+        let position = 0;
+        for (const chunk of chunks) {
+            chunksAll.set(chunk, position);
+            position += chunk.length;
+        }
+
+        const text = new TextDecoder("utf-8").decode(chunksAll);
+        return JSON.parse(text);
+    } catch (err: any) {
+        if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
+            throw new Error(`Network Error: Der Browser blockiert den Manifest-Download (CORS/Adblocker?) oder die Verbindung ist instabil. Bitte versuche die Seite neu zu laden.`);
+        }
+        throw err;
     }
-  }
-
-  const chunksAll = new Uint8Array(received);
-  let position = 0;
-  for (const chunk of chunks) {
-    chunksAll.set(chunk, position);
-    position += chunk.length;
-  }
-
-  const text = new TextDecoder("utf-8").decode(chunksAll);
-  return JSON.parse(text);
 }
 
 export async function loadManifest(
