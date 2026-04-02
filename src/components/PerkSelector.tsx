@@ -10,12 +10,30 @@ interface PerkSelectorProps {
   onTogglePerk: (hash: number) => void;
 }
 
+// Language-independent category hashes for weapon perks
+const PERK_CATEGORY_HASHES = [
+  4241352761, // Weapon Perks
+  3705191010, // Intrinsic
+  2216078230, // Origin Trait
+  2611454766, // Additional Weapon Perks
+  1362267390, // Alternate Perks
+];
+
+// Explicitly ignore these
+const IGNORE_CATEGORY_HASHES = [
+  2048505904, // Modifications
+  267439160,  // Cosmetics
+  3532890696, // Masterwork
+  1053423714, // Trackers
+];
+
 export function PerkSelector({ weapon, items, plugSets, socketCategories, selectedPerks, onTogglePerk }: PerkSelectorProps) {
   if (!weapon.sockets) {
     return <div className="card glass-panel"><p>This weapon has no configurable perks.</p></div>;
   }
 
   const isEnhancedPerk = (item: DestinyItemDefinition) => {
+    if (!item.displayProperties) return false;
     const name = item.displayProperties.name;
     const isEnhancedName = name.includes('Enhanced') || name.includes('Verbesserter') || name.includes('Verbesserte') || name.includes('Verbessertes');
     const hasEnhancedCategory = item.itemCategoryHashes?.includes(2237026461);
@@ -45,23 +63,12 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
       });
   };
 
-  // Filter sockets by their category name
-  // We only want categories that sound like "Weapon Perks", "Origin Traits", etc.
   const validSocketIndices: number[] = [];
   weapon.sockets.socketCategories.forEach(cat => {
-    const catDef = socketCategories[cat.socketCategoryHash];
-    const catName = catDef?.displayProperties?.name || '';
+    const isWhitelisted = PERK_CATEGORY_HASHES.includes(cat.socketCategoryHash);
+    const isBlacklisted = IGNORE_CATEGORY_HASHES.includes(cat.socketCategoryHash);
     
-    // Whitelist categories
-    const isPerkCategory = 
-      catName.includes('Perks') || 
-      catName.includes('Traits') || 
-      catName.includes('Magazine') || 
-      catName.includes('LÄUFE') || 
-      catName.includes('MOULD') || // Intrinsic sometimes
-      catName === 'Abilities'; // Sometimes used for frames
-
-    if (isPerkCategory && !catName.includes('Cosmetics') && !catName.includes('Modifications')) {
+    if (isWhitelisted && !isBlacklisted) {
         validSocketIndices.push(...cat.socketIndices);
     }
   });
@@ -71,13 +78,26 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
     .filter(col => col.plugs.length > 0);
 
   if (perkColumns.length === 0) {
-    return <div className="card glass-panel"><p>No perk variations available for this weapon.</p></div>;
+    // Debug fallback: if everything was filtered, let's see what categories we had
+    const availableCats = weapon.sockets.socketCategories.map(c => {
+        const def = socketCategories[c.socketCategoryHash];
+        return `${def?.displayProperties?.name || 'Unknown'} (${c.socketCategoryHash})`;
+    }).join(', ');
+
+    return (
+      <div className="card glass-panel">
+        <p>No perk variations available for this weapon.</p>
+        <p style={{ fontSize: '0.75rem', marginTop: '1rem', color: 'var(--text-secondary)' }}>
+          Found categories: {availableCats}
+        </p>
+      </div>
+    );
   }
 
   return (
     <div className="card glass-panel">
       <h2 className="card-title">
-        <Crosshair size={24} /> {weapon.displayProperties.name} Perks
+        <Crosshair size={24} /> {weapon.displayProperties.name}
       </h2>
       <div className="perk-grid">
         {perkColumns.map((col, colIdx) => (
@@ -92,6 +112,7 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
                   key={perk.hash}
                   className={`perk-item ${isSelected ? 'selected' : ''} ${isMw ? 'masterwork' : ''} ${isEnhanced ? 'perk-enhanced' : ''}`}
                   onClick={() => onTogglePerk(perk.hash)}
+                  title={perk.displayProperties.name}
                 >
                   {perk.displayProperties.hasIcon && (
                     <img 
