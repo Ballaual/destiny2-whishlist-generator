@@ -398,9 +398,8 @@ function App() {
           name: wishlistName || 'D2WLG',
           description: wishlistDescription || 'Exported from D2WLG',
           data: wishlistEntries.map(entry => {
-            const weapon = items[(entry.itemHash >>> 0).toString()];
             return {
-              name: entry.name || weapon?.displayProperties?.name || "",
+              name: entry.name || "",
               description: entry.description || entry.notes || "",
               hash: entry.itemHash,
               plugs: entry.perkHashes.map(h => [h]),
@@ -423,7 +422,8 @@ function App() {
           
           const notesStr = tagsStr ? `tags:${tagsStr}${comments.length ? `, ${comments.join(' - ')}` : ''}` : (comments.length ? comments.join(' - ') : '');
 
-          return `// ${entry.name || weaponName}${tagsStr ? ` (${tagsStr})` : ''}\n//notes: ${notesStr}\ndimwishlist:item=${entry.itemHash}${entry.perkHashes.length > 0 ? `&perks=${entry.perkHashes.join(',')}` : ''}`;
+          const commentPrefix = entry.name ? `${entry.name} [${weaponName}]` : weaponName;
+          return `// ${commentPrefix}${tagsStr ? ` (${tagsStr})` : ''}\n//notes: ${notesStr}\ndimwishlist:item=${entry.itemHash}${entry.perkHashes.length > 0 ? `&perks=${entry.perkHashes.join(',')}` : ''}`;
         }).join('\n\n');
         content = header + entries;
         mimeType = 'text/plain';
