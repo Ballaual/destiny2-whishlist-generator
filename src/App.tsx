@@ -175,7 +175,7 @@ function IntroView({ t, lang }: { t: any, lang: string }) {
         <div className="card glass-panel welcome-card" style={{ gridColumn: 'span 1' }}>
           <div className="welcome-card-header">
             <div className="welcome-card-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}><Check size={24} /></div>
-          <h3 style={{ color: 'var(--accent-color)' }}>{lang === 'de' ? 'Features' : 'Features'}</h3>
+          <h3 style={{ margin: 0 }}>{lang === 'de' ? 'Features' : 'Features'}</h3>
           </div>
           <ul style={{ listStyle: 'none', padding: 0, margin: '1rem 0 0 0', display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem' }}>
             <li style={{ display: 'flex', gap: '0.75rem' }}><Check size={14} color="#10b981" style={{ flexShrink: 0, marginTop: '2px' }} /> {t.featureManifest}</li>
@@ -189,7 +189,7 @@ function IntroView({ t, lang }: { t: any, lang: string }) {
         <div className="card glass-panel welcome-card">
           <div className="welcome-card-header">
             <div className="welcome-card-icon" style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8' }}><Search size={24} /></div>
-            <h3>{lang === 'de' ? 'Waffen & Perks' : 'Discovery & Crafting'}</h3>
+            <h3 style={{ margin: 0 }}>{lang === 'de' ? 'Waffen & Perks' : 'Discovery & Crafting'}</h3>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem', fontSize: '0.85rem' }}>
             <p><strong>{lang === 'de' ? 'Waffen suchen' : 'Search for Weapons'}:</strong> {t.step1Desc}</p>
@@ -201,7 +201,7 @@ function IntroView({ t, lang }: { t: any, lang: string }) {
         <div className="card glass-panel welcome-card">
           <div className="welcome-card-header">
             <div className="welcome-card-icon" style={{ background: 'rgba(168, 85, 247, 0.1)', color: '#a855f7' }}><Save size={24} /></div>
-            <h3>{lang === 'de' ? 'Verwalten & Organisieren' : 'Manage & Organize'}</h3>
+            <h3 style={{ margin: 0 }}>{lang === 'de' ? 'Verwalten & Organisieren' : 'Manage & Organize'}</h3>
           </div>
           <div style={{ marginTop: '1rem', fontSize: '0.85rem' }}>
              <p>{t.step3Desc}</p>
@@ -217,7 +217,7 @@ function IntroView({ t, lang }: { t: any, lang: string }) {
         <div className="card glass-panel welcome-card">
           <div className="welcome-card-header">
             <div className="welcome-card-icon" style={{ background: 'rgba(234, 179, 8, 0.1)', color: '#eab308' }}><FileOutput size={24} /></div>
-            <h3>{lang === 'de' ? 'Export & Sync' : 'Export & Sync'}</h3>
+            <h3 style={{ margin: 0 }}>{lang === 'de' ? 'Export & Sync' : 'Export & Sync'}</h3>
           </div>
           <div style={{ marginTop: '1rem', fontSize: '0.85rem' }}>
             <p>{t.step4Desc}</p>

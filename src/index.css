@@ -432,7 +432,7 @@ button {
   color: var(--text-primary);
 }
 
-.welcome-card p {
+.welcome-card p, .welcome-card li {
   font-size: 0.9rem;
   color: var(--text-secondary);
   line-height: 1.5;
