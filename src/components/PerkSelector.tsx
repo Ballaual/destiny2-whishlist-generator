@@ -36,26 +36,32 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
     if (!entry) return [];
     
     let plugHashes: number[] = [];
+    
+    // Combine all potential sources
     if (entry.randomizedPlugSetHash) {
-      plugHashes = plugSets[entry.randomizedPlugSetHash]?.reusablePlugItems.map(p => p.plugItemHash) || [];
-    } else if (entry.reusablePlugSetHash) {
-      plugHashes = plugSets[entry.reusablePlugSetHash]?.reusablePlugItems.map(p => p.plugItemHash) || [];
-    } else if (entry.reusablePlugItems) {
-      plugHashes = entry.reusablePlugItems.map((p: any) => p.plugItemHash);
+      const set = plugSets[entry.randomizedPlugSetHash] || plugSets[entry.randomizedPlugSetHash >>> 0];
+      if (set?.reusablePlugItems) plugHashes.push(...set.reusablePlugItems.map(p => p.plugItemHash));
     }
     
-    // Add initial item as fallback
-    if (plugHashes.length === 0 && entry.singleInitialItemHash) {
-      plugHashes = [entry.singleInitialItemHash];
+    if (entry.reusablePlugSetHash) {
+      const set = plugSets[entry.reusablePlugSetHash] || plugSets[entry.reusablePlugSetHash >>> 0];
+      if (set?.reusablePlugItems) plugHashes.push(...set.reusablePlugItems.map(p => p.plugItemHash));
     }
     
-    return Array.from(new Set(plugHashes)) // Deduplicate
-      .map(hash => items[hash])
+    if (entry.reusablePlugItems && entry.reusablePlugItems.length > 0) {
+      plugHashes.push(...entry.reusablePlugItems.map((p: any) => p.plugItemHash));
+    }
+    
+    if (entry.singleInitialItemHash) {
+      plugHashes.push(entry.singleInitialItemHash);
+    }
+    
+    return Array.from(new Set(plugHashes))
+      .map(hash => items[hash] || items[hash >>> 0])
       .filter((item): item is DestinyItemDefinition => {
         if (!item || !item.displayProperties) return false;
         const name = item.displayProperties.name || '';
         
-        // Final sanity filters
         if (!name || name === 'Classified' || name === 'Empty Mod Socket' || name === 'Default Shader' || name === 'Kill Tracker' || name.includes('Ornament')) return false;
         if (item.itemCategoryHashes?.includes(41)) return false; // Shaders
         if (item.itemCategoryHashes?.includes(59)) return false; // Mods
@@ -78,12 +84,17 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
     });
   }
 
-  // If no categories matched our blacklist, but we found nothing, let's try ALL sockets
-  let effectiveIndices = validSocketIndices.length > 0 ? validSocketIndices : weapon.sockets.socketEntries.map((_, i) => i);
-
-  const perkColumns = effectiveIndices
+  // Try whitelisted categories first, but if that yields nothing, try EVERYTHING
+  let perkColumns = validSocketIndices
     .map(idx => ({ index: idx, plugs: getPlugsForSocket(weapon.sockets!.socketEntries[idx]) }))
     .filter(col => col.plugs.length > 0);
+  
+  if (perkColumns.length === 0) {
+    perkColumns = weapon.sockets.socketEntries
+      .map((_, idx) => ({ index: idx, plugs: getPlugsForSocket(weapon.sockets!.socketEntries[idx]) }))
+      .filter(col => col.plugs.length > 0)
+      .slice(0, 15); // Safety limit
+  }
 
   if (perkColumns.length === 0) {
     const debugInfo = weapon.sockets.socketCategories?.map(c => {
@@ -107,9 +118,9 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
         <Crosshair size={24} /> {weapon.displayProperties?.name || 'Weapon Perks'}
       </h2>
       <div className="perk-grid">
-        {perkColumns.map((col, colIdx) => (
+        {perkColumns.map((col: any, colIdx: number) => (
           <div key={`${col.index}-${colIdx}`} className="perk-column">
-            {col.plugs.map(perk => {
+            {col.plugs.map((perk: any) => {
               if (!perk) return null;
               
               const isSelected = selectedPerks.has(perk.hash);
