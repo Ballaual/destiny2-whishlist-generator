@@ -39,12 +39,12 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
     
     // Combine all potential sources
     if (entry.randomizedPlugSetHash) {
-      const set = plugSets[entry.randomizedPlugSetHash] || plugSets[entry.randomizedPlugSetHash >>> 0];
+      const set = plugSets[(entry.randomizedPlugSetHash >>> 0).toString()];
       if (set?.reusablePlugItems) plugHashes.push(...set.reusablePlugItems.map(p => p.plugItemHash));
     }
     
     if (entry.reusablePlugSetHash) {
-      const set = plugSets[entry.reusablePlugSetHash] || plugSets[entry.reusablePlugSetHash >>> 0];
+      const set = plugSets[(entry.reusablePlugSetHash >>> 0).toString()];
       if (set?.reusablePlugItems) plugHashes.push(...set.reusablePlugItems.map(p => p.plugItemHash));
     }
     
@@ -57,7 +57,7 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
     }
     
     return Array.from(new Set(plugHashes))
-      .map(hash => items[hash] || items[hash >>> 0])
+      .map(hash => items[(hash >>> 0).toString()])
       .filter((item): item is DestinyItemDefinition => {
         if (!item || !item.displayProperties) return false;
         const name = item.displayProperties.name || '';
@@ -98,7 +98,7 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
 
   if (perkColumns.length === 0) {
     const debugInfo = weapon.sockets.socketCategories?.map(c => {
-        const def = socketCategories[c.socketCategoryHash];
+        const def = socketCategories[(c.socketCategoryHash >>> 0).toString()];
         return `${def?.displayProperties?.name || 'Unknown'} (${c.socketCategoryHash})`;
     }).join(' | ') || 'None';
 

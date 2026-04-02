@@ -13,6 +13,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(10);
 
   const [items, setItems] = useState<Record<string, DestinyItemDefinition>>({});
   const [plugSets, setPlugSets] = useState<Record<string, DestinyPlugSetDefinition>>({});
@@ -25,6 +26,22 @@ function App() {
   const [notes, setNotes] = useState('');
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
+  // Auto-reload logic for retryable errors
+  useEffect(() => {
+    if (error && error.includes('[RETRY]')) {
+      const timer = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            window.location.reload();
+            return 10;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [error]);
 
   useEffect(() => {
     async function init() {
@@ -93,43 +110,25 @@ function App() {
 
   const handleExport = (format: string) => {
     if (wishlistEntries.length === 0) return;
-
     let content = '';
     let mimeType = 'application/json';
     let fileName = 'destiny2_wishlist.json';
 
     try {
       if (format === 'internal') {
-        const internalData = {
-          source: 'Destiny 2 Wishlist Generator',
-          version: '1.0',
-          exportedAt: new Date().toISOString(),
-          entries: wishlistEntries
-        };
-        content = JSON.stringify(internalData, null, 2);
+        content = JSON.stringify({ source: 'Destiny 2 Wishlist Generator', version: '1.0', exportedAt: new Date().toISOString(), entries: wishlistEntries }, null, 2);
       } else if (format === 'littlelight') {
-        const llData = wishlistEntries.map(entry => ({
-          itemHash: entry.itemHash,
-          recommendedPerks: entry.perkHashes
-        }));
-        content = JSON.stringify(llData, null, 2);
+        content = JSON.stringify(wishlistEntries.map(entry => ({ itemHash: entry.itemHash, recommendedPerks: entry.perkHashes })), null, 2);
       } else if (format === 'dim') {
-        const lines = [];
-        for (const entry of wishlistEntries) {
-          if (entry.notes) {
-            lines.push(`//notes:${entry.notes}`);
-          }
-          const itemPart = `item=${entry.itemHash}`;
-          const perksPart = entry.perkHashes.length > 0 ? `&perks=${entry.perkHashes.join(',')}` : '';
-          lines.push(`dimwishlist:${itemPart}${perksPart}`);
-        }
-        content = lines.join('\n');
+        content = wishlistEntries.map(entry => {
+          const notesPart = entry.notes ? `//notes:${entry.notes}\n` : '';
+          return `${notesPart}dimwishlist:item=${entry.itemHash}${entry.perkHashes.length > 0 ? `&perks=${entry.perkHashes.join(',')}` : ''}`;
+        }).join('\n');
         mimeType = 'text/plain';
         fileName = 'destiny2_wishlist.txt';
       }
 
       if (!content) return;
-      
       const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -137,11 +136,7 @@ function App() {
       link.setAttribute('download', fileName);
       document.body.appendChild(link);
       link.click();
-      
-      setTimeout(() => {
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, 100);
+      setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(url); }, 100);
     } catch (err) {
       console.error('Export Error:', err);
     }
@@ -159,7 +154,7 @@ function App() {
   };
 
   const handleSelectEntry = (entry: WishlistEntry) => {
-    const weapon = items[entry.itemHash];
+    const weapon = items[(entry.itemHash >>> 0).toString()];
     if (weapon) {
       setSelectedWeapon(weapon);
       setSelectedPerks(new Set(entry.perkHashes));
@@ -181,13 +176,26 @@ function App() {
   }
 
   if (error) {
+    const isRetryable = error.includes('[RETRY]');
+    const displayError = error.replace('[RETRY]', '').trim();
+
     return (
       <div className="loading-overlay">
         <h2 style={{ color: '#ef4444' }}>Error Loading Manifest</h2>
-        <p>{error}</p>
-        <button className="btn-primary" style={{ marginTop: '1rem' }} onClick={() => window.location.reload()}>
-          Retry
-        </button>
+        <p style={{ maxWidth: '400px', textAlign: 'center' }}>{displayError}</p>
+        
+        {isRetryable ? (
+          <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+            <p style={{ color: 'var(--text-secondary)' }}>Automatischer Reload in <strong style={{ color: 'var(--accent-color)' }}>{countdown}</strong> Sekunden...</p>
+            <div className="progress-bar-container" style={{ width: '200px', height: '4px', margin: '1rem auto' }}>
+              <div className="progress-bar-fill" style={{ width: `${(countdown / 10) * 100}%`, transition: 'width 1s linear' }}></div>
+            </div>
+          </div>
+        ) : (
+          <button className="btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => window.location.reload()}>
+            Manuell neu versuchen
+          </button>
+        )}
       </div>
     );
   }

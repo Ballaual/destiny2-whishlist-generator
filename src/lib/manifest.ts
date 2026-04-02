@@ -105,6 +105,8 @@ export async function fetchWithProgress(url: string, onProgress?: (progress: num
     }
 }
 
+const SCHEMA_VERSION = 'v2';
+
 export async function loadManifest(
   onProgress?: (progress: number) => void
 ): Promise<{ 
@@ -114,7 +116,14 @@ export async function loadManifest(
     searchIndex: SearchIndex 
 }> {
   
-  // Step 1: Check cache
+  // Step 1: Check cache & Schema
+  const cachedSchema = await manifestCache.getItem<string>('schema_version');
+  if (cachedSchema !== SCHEMA_VERSION) {
+    console.log("Manifest Schema Outdated. Clearing cache...");
+    await manifestCache.clear();
+    await manifestCache.setItem('schema_version', SCHEMA_VERSION);
+  }
+
   let items = await manifestCache.getItem<Record<string, DestinyItemDefinition>>('items');
   let plugSets = await manifestCache.getItem<Record<string, DestinyPlugSetDefinition>>('plugSets');
   let socketCategories = await manifestCache.getItem<Record<string, DestinySocketCategoryDefinition>>('socketCategories');
@@ -122,14 +131,25 @@ export async function loadManifest(
   let cachedVersion = await manifestCache.getItem<string>('version');
 
   // Step 2: Fetch current manifest version from Bungie
-  const rootResponse = await fetch(MANIFEST_API);
+  let rootResponse;
+  try {
+    rootResponse = await fetch(MANIFEST_API);
+  } catch (e: any) {
+    throw new Error(`Connection Error: Bungie API is unreachable. This might be a temporary network issue. [RETRY]`);
+  }
+
   if (!rootResponse.ok) {
-     throw new Error(`Bungie Manifest API is currently unavailable (Status: ${rootResponse.status}). Please try again later.`);
+     const isRetryable = rootResponse.status === 500 || rootResponse.status === 502 || rootResponse.status === 504;
+     const retrySuffix = isRetryable ? ' [RETRY]' : '';
+     throw new Error(`Bungie Manifest API is currently unavailable (Status: ${rootResponse.status}).${retrySuffix}`);
   }
   
   const manifestRoot = await rootResponse.json();
   if (!manifestRoot || !manifestRoot.Response) {
-     throw new Error(`Bungie API returned an invalid response (ErrorCode: ${manifestRoot?.ErrorCode || 'Unknown'}). The API might be down for maintenance.`);
+     const isMaintenance = manifestRoot?.ErrorCode === 5 || manifestRoot?.ErrorCode === 4;
+     const errorMsg = isMaintenance ? 'Bungie API is down for maintenance.' : `Bungie API returned an error (ErrorCode: ${manifestRoot?.ErrorCode || 'Unknown'}).`;
+     const retrySuffix = (!isMaintenance && manifestRoot?.ErrorCode !== 404) ? ' [RETRY]' : '';
+     throw new Error(`${errorMsg}${retrySuffix}`);
   }
 
   const currentVersion = manifestRoot.Response.version;
@@ -171,29 +191,44 @@ export async function loadManifest(
         if(onProgress) onProgress(91 + (p * 0.09)); // 9% of total
       });
 
-      // Build Search Index
+      // Build normalized dictionaries and search index
+      const normalizedItems: Record<string, DestinyItemDefinition> = {};
+      const normalizedPlugSets: Record<string, DestinyPlugSetDefinition> = {};
+      const normalizedSocketCategories: Record<string, DestinySocketCategoryDefinition> = {};
       const newSearchIndex: SearchIndex = {};
+
       for (const hash in newItemsEn) {
+          const unsignedHash = (parseInt(hash, 10) >>> 0).toString();
           const itemEn = newItemsEn[hash];
           const itemDe = newItemsDe[hash];
+          normalizedItems[unsignedHash] = itemEn;
+
           if (itemEn.displayProperties?.name) {
-              newSearchIndex[parseInt(hash, 10)] = {
+              newSearchIndex[parseInt(unsignedHash, 10)] = {
                   en: itemEn.displayProperties.name,
                   de: itemDe?.displayProperties?.name || itemEn.displayProperties.name
               };
           }
       }
 
-      await manifestCache.setItem('items', newItemsEn);
-      await manifestCache.setItem('plugSets', newPlugSets);
-      await manifestCache.setItem('socketCategories', newSocketCategories);
+      for (const hash in newPlugSets) {
+          normalizedPlugSets[(parseInt(hash, 10) >>> 0).toString()] = newPlugSets[hash];
+      }
+
+      for (const hash in newSocketCategories) {
+          normalizedSocketCategories[(parseInt(hash, 10) >>> 0).toString()] = newSocketCategories[hash];
+      }
+
+      await manifestCache.setItem('items', normalizedItems);
+      await manifestCache.setItem('plugSets', normalizedPlugSets);
+      await manifestCache.setItem('socketCategories', normalizedSocketCategories);
       await manifestCache.setItem('searchIndex', newSearchIndex);
 
       if(onProgress) onProgress(100);
       return { 
-          items: newItemsEn, 
-          plugSets: newPlugSets, 
-          socketCategories: newSocketCategories,
+          items: normalizedItems, 
+          plugSets: normalizedPlugSets, 
+          socketCategories: normalizedSocketCategories,
           searchIndex: newSearchIndex 
       };
     } catch (e: any) {

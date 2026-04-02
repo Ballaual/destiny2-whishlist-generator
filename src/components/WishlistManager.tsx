@@ -119,7 +119,7 @@ export function WishlistManager({ entries, items, onExport, onImport, onRemove, 
           <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>Current Entries ({entries.length})</h3>
           <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {entries.map((entry, idx) => {
-              const weaponDef = items[entry.itemHash];
+              const weaponDef = items[(entry.itemHash >>> 0).toString()];
               return (
                 <div key={idx} className="search-result-item" style={{ justifyContent: 'space-between', borderRadius: '8px', padding: '0.5rem 1rem' }}>
                   <div 
@@ -134,7 +134,7 @@ export function WishlistManager({ entries, items, onExport, onImport, onRemove, 
                       />
                     )}
                     <div>
-                      <div style={{ fontWeight: 600 }}>{weaponDef?.displayProperties?.name || `Unknown (${entry.itemHash})`}</div>
+                      <div style={{ fontWeight: 600 }}>{weaponDef?.displayProperties?.name || `Unknown (${(entry.itemHash >>> 0)})`}</div>
                       {entry.notes && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{entry.notes}</div>}
                     </div>
                   </div>
