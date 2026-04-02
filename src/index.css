@@ -176,6 +176,20 @@ button {
   grid-template-columns: 350px 1fr;
   gap: 2.5rem;
   align-items: flex-start;
+  min-height: 0; /* Important for children overflow */
+}
+
+.column-left {
+  position: sticky;
+  top: 1.5rem;
+  max-height: calc(100vh - 3rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Prevent sidebar itself from scrolling whole content */
+}
+
+.column-right {
+  min-height: 0;
 }
 
 .section-header {

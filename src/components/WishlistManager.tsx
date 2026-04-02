@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trash2, Copy, Download, Upload, FileText, Code, Smartphone, ChevronRight, Check, Table } from 'lucide-react';
+import { Trash2, Copy, Download, Upload, FileText, Code, Smartphone, ChevronRight, Check, Table, Search, X } from 'lucide-react';
 import type { DestinyItemDefinition } from '../lib/manifest';
 
 export interface WishlistEntry {
@@ -36,6 +36,23 @@ export function WishlistManager({
   wishlistName, onWishlistNameChange, wishlistDescription, onWishlistDescriptionChange, labels 
 }: WishlistManagerProps) {
   const [exportFormat, setExportFormat] = useState('internal');
+  const [filterText, setFilterText] = useState('');
+
+  const filteredEntries = entries.filter((entry) => {
+    if (!filterText.trim()) return true;
+    const weapon = items[(entry.itemHash >>> 0).toString()];
+    const query = filterText.toLowerCase();
+    
+    // Search Name, ID, Tags, Notes, Description
+    return (
+      (weapon?.displayProperties?.name.toLowerCase().includes(query)) ||
+      (entry.name?.toLowerCase().includes(query)) ||
+      (entry.itemHash.toString().includes(query)) ||
+      (entry.notes?.toLowerCase().includes(query)) ||
+      (entry.description?.toLowerCase().includes(query)) ||
+      (entry.tags?.some(tag => tag.toLowerCase().includes(query)))
+    );
+  });
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -67,17 +84,38 @@ export function WishlistManager({
   ];
 
   return (
-    <div className="wishlist-manager" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', height: '100%' }}>
-      <div className="wishlist-items glass-panel" style={{ flex: 1, minHeight: '300px', overflowY: 'auto', padding: '1rem' }}>
-        {entries.length === 0 ? (
-          <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>
-            {lang === 'de' ? 'Deine Wunschliste ist noch leer.' : 'Your wishlist is empty.'}
+    <div className="wishlist-manager" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%', overflow: 'hidden' }}>
+      <div className="wishlist-filter-wrapper" style={{ position: 'relative' }}>
+        <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+        <input 
+          type="text" 
+          className="input-primary" 
+          placeholder={lang === 'de' ? 'Filter (Name, ID, Tags...)' : 'Filter (Name, ID, Tags...)'}
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+          style={{ padding: '0.5rem 2rem', fontSize: '0.8rem' }}
+        />
+        {filterText && (
+          <button 
+            onClick={() => setFilterText('')}
+            style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'transparent', color: 'var(--text-secondary)' }}
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+
+      <div className="wishlist-items glass-panel" style={{ flex: 1, minHeight: '150px', overflowY: 'auto', padding: '0.75rem' }}>
+        {filteredEntries.length === 0 ? (
+          <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem', fontSize: '0.85rem' }}>
+            {filterText ? (lang === 'de' ? 'Keine Ergebnisse.' : 'No results.') : (lang === 'de' ? 'Deine Wunschliste ist noch leer.' : 'Your wishlist is empty.')}
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {entries.map((entry, idx) => {
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            {filteredEntries.map((entry) => {
               const weapon = items[(entry.itemHash >>> 0).toString()];
               if (!weapon) return null;
+              const idx = entries.indexOf(entry); // Key to real index for copy/remove
 
               return (
                 <div 
@@ -96,7 +134,7 @@ export function WishlistManager({
                     )}
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                        {entry.name || weapon.displayProperties.name} <span style={{ opacity: 0.5, fontSize: '0.8em' }}>({entry.itemHash})</span>
+                        {entry.name || weapon.displayProperties.name}
                       </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.2rem' }}>
                         {entry.tags && entry.tags.length > 0 && (

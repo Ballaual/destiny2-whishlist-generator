@@ -136,7 +136,7 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
   return (
     <div className="card glass-panel">
       <h2 className="card-title">
-        <Crosshair size={24} /> {weapon.displayProperties?.name || 'Weapon Perks'}
+        <Crosshair size={24} /> {weapon.displayProperties?.name || 'Weapon Perks'} <span style={{ opacity: 0.5, fontSize: '0.7em', fontWeight: 400, marginLeft: '0.5rem' }}>({weapon.hash})</span>
       </h2>
       <div className="perk-grid">
         {perkColumns.map((col: any, colIdx: number) => (
@@ -164,7 +164,10 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
                   )}
                   {isEnhanced && <div className="enhanced-badge"><Star size={10} fill="#eab308" /></div>}
                   <div className="perk-tooltip">
-                    <strong>{perkName}</strong>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                        {perkName}
+                      </div>
+                      <div style={{ opacity: 0.7, fontSize: '0.7rem' }}>{perk.hash}</div>
                     {isEnhanced && <div style={{ color: '#eab308', fontSize: '0.7rem' }}>Enhanced</div>}
                   </div>
                 </button>

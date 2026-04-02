@@ -36,7 +36,7 @@ const TRANSLATIONS = {
     langDeDesc: 'Fully localized data. Ideal for reading perk effects and descriptions in your native language.',
     welcomeTitle: 'Welcome to the Destiny 2 Wishlist Generator',
     welcomeSubtitle: 'The most powerful way to craft and export your Destiny 2 God-Roll wishlists.',
-    step1Title: '1. Search for Weapons (Name or ID)',
+    step1Title: '1. Search for Weapons',
     step1Desc: 'Use the search bar in the header to find any weapon by name or its unique ID. We support both English and German.',
     step2Title: '2. Select your Perks',
     step2Desc: 'Click on the perks you want for your God-Roll. You can select multiple perks per column to define your perfect roll.',
@@ -73,7 +73,7 @@ const TRANSLATIONS = {
     langDeDesc: 'Vollständig lokalisierte Daten. Ideal, um Perk-Effekte und Beschreibungen auf Deutsch zu lesen.',
     welcomeTitle: 'Willkommen beim Destiny 2 Wunschlisten Generator',
     welcomeSubtitle: 'Der einfachste Weg, um deine Destiny 2 God-Roll-Wunschlisten zu erstellen und zu exportieren.',
-    step1Title: '1. Waffe suchen (Name oder ID)',
+    step1Title: '1. Waffe suchen',
     step1Desc: 'Nutze die Suche im Header, um eine Waffe per Name oder ID zu finden. Wir unterstützen deutsche und englische Bezeichnungen.',
     step2Title: '2. Perks wählen',
     step2Desc: 'Klicke auf die Perks, die dein God-Roll haben soll. Du kannst pro Spalte mehrere Perks auswählen.',
@@ -419,7 +419,7 @@ function App() {
           if (entry.name) comments.push(entry.name);
           if (entry.description) comments.push(entry.description);
           if (entry.notes) comments.push(entry.notes);
-          
+
           const notesStr = tagsStr ? `tags:${tagsStr}${comments.length ? `, ${comments.join(' - ')}` : ''}` : (comments.length ? comments.join(' - ') : '');
 
           const commentPrefix = entry.name ? `${entry.name} [${weaponName}]` : weaponName;
@@ -653,7 +653,7 @@ function App() {
                     <img
                       src={`https://www.bungie.net${selectedWeapon.screenshot}`}
                       alt="Weapon Screenshot"
-                      style={{ width: '100%', height: '100%', objectFit: 'contain', background: 'rgba(0,0,0,0.2)', opacity: 0.8 }}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </div>
                 )}
