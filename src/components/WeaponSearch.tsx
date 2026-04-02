@@ -6,9 +6,10 @@ interface WeaponSearchProps {
   items: Record<string, DestinyItemDefinition>;
   searchIndex: Record<number, { en: string; de: string }>;
   onSelect: (item: DestinyItemDefinition) => void;
+  lang?: 'en' | 'de';
 }
 
-export function WeaponSearch({ items, searchIndex, onSelect }: WeaponSearchProps) {
+export function WeaponSearch({ items, searchIndex, onSelect, lang = 'en' }: WeaponSearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<DestinyItemDefinition[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -60,7 +61,7 @@ export function WeaponSearch({ items, searchIndex, onSelect }: WeaponSearchProps
         <input
           type="text"
           className="header-search-input"
-          placeholder="Suche Waffe (DE/EN)..."
+          placeholder={lang === 'de' ? "Waffe suchen (DE/EN)..." : "Search weapon (EN/DE)..."}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => { if (results.length > 0) setIsOpen(true) }}

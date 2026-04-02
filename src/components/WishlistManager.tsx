@@ -13,13 +13,19 @@ export type ExportFormat = 'internal' | 'dim' | 'littlelight';
 interface WishlistManagerProps {
   entries: WishlistEntry[];
   items: Record<string, DestinyItemDefinition>;
+  lang: 'en' | 'de';
   onExport: (format: ExportFormat) => void;
   onImport: (entries: WishlistEntry[]) => void;
   onRemove: (index: number) => void;
   onSelectEntry: (entry: WishlistEntry) => void;
+  labels: {
+    header: string;
+    importBtn: string;
+    exportBtn: string;
+  };
 }
 
-export function WishlistManager({ entries, items, onExport, onImport, onRemove, onSelectEntry }: WishlistManagerProps) {
+export function WishlistManager({ entries, items, lang, onExport, onImport, onRemove, onSelectEntry, labels }: WishlistManagerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [exportFormat, setExportFormat] = useState<ExportFormat>('internal');
   const [importError, setImportError] = useState<string | null>(null);
@@ -63,7 +69,7 @@ export function WishlistManager({ entries, items, onExport, onImport, onRemove, 
 
   return (
     <div className="card glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <h2 className="card-title">Wishlist Manager</h2>
+      <h2 className="card-title">{labels.header}</h2>
       
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -72,7 +78,7 @@ export function WishlistManager({ entries, items, onExport, onImport, onRemove, 
             onClick={() => setExportFormat('internal')}
             style={{ flex: 1, borderColor: exportFormat === 'internal' ? 'var(--accent-color)' : 'var(--panel-border)' }}
           >
-            <FileJson size={16} /> JSON (Internal)
+            <FileJson size={16} /> JSON ({lang === 'de' ? 'Intern' : 'Internal'})
           </button>
           <button 
             className={`btn-secondary ${exportFormat === 'dim' ? 'selected' : ''}`} 
@@ -92,10 +98,10 @@ export function WishlistManager({ entries, items, onExport, onImport, onRemove, 
 
         <div style={{ display: 'flex', gap: '1rem' }}>
           <button className="btn-primary" onClick={() => onExport(exportFormat)} disabled={entries.length === 0} style={{ flex: 2, justifyContent: 'center' }}>
-            <Download size={18} /> Export as {exportFormat === 'internal' ? 'Internal JSON' : exportFormat === 'dim' ? 'DIM TXT' : 'Little Light JSON'}
+            <Download size={18} /> {labels.exportBtn} {exportFormat === 'internal' ? 'Internal JSON' : exportFormat === 'dim' ? 'DIM TXT' : 'Little Light JSON'}
           </button>
           <button className="btn-secondary" onClick={() => fileInputRef.current?.click()} style={{ flex: 1, justifyContent: 'center' }}>
-            <Upload size={18} /> Import JSON
+            <Upload size={18} /> {labels.importBtn}
           </button>
         </div>
 

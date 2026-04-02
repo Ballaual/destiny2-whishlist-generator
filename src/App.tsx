@@ -6,10 +6,64 @@ import { PerkSelector } from './components/PerkSelector';
 import { WishlistManager } from './components/WishlistManager';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import type { WishlistEntry } from './components/WishlistManager';
-import { PlusCircle, Database, Check, Layout, ListChecks } from 'lucide-react';
+import { PlusCircle, Database, Check, Layout, ListChecks, Info } from 'lucide-react';
 import './index.css';
 
+type Language = 'en' | 'de';
+
+const TRANSLATIONS = {
+  en: {
+    title: 'Wishlist Generator',
+    subtitle: 'Destiny 2 God-Roll Creator',
+    loading: 'Loading Manifest...',
+    errorTitle: 'Error Loading Manifest',
+    retryBtn: 'Retry manually',
+    autoReload: 'Automatic reload in',
+    seconds: 'seconds',
+    myWishlist: 'My Wishlist',
+    perkConfig: 'Perk Configuration',
+    saveGodRoll: 'Save God-Roll',
+    notesPlaceholder: 'Notes (e.g. PvP, Raid, etc.)',
+    addBtn: 'Add',
+    updateBtn: 'Update',
+    cancelBtn: 'Cancel',
+    noWeaponSelected: 'Choose a weapon',
+    searchInstructions: 'Search in the header to start building your wishlist entries.',
+    langEn: 'English',
+    langDe: 'Deutsch',
+    langEnDesc: 'Standard metadata. Best for using the exported rolls in external apps like DIM or Little Light.',
+    langDeDesc: 'Vollständig lokalisierte Daten. Ideal, um Perk-Effekte und Beschreibungen in deiner Muttersprache zu lesen.'
+  },
+  de: {
+    title: 'Wishlist Generator',
+    subtitle: 'Destiny 2 God-Roll Creator',
+    loading: 'Lade Manifest...',
+    errorTitle: 'Fehler beim Laden des Manifests',
+    retryBtn: 'Manuell neu versuchen',
+    autoReload: 'Automatischer Reload in',
+    seconds: 'Sekunden',
+    myWishlist: 'Meine Wunschliste',
+    perkConfig: 'Perk-Konfiguration',
+    saveGodRoll: 'God-Roll speichern',
+    notesPlaceholder: 'Notizen (z.B. PvP, Raid, etc.)',
+    addBtn: 'Hinzufügen',
+    updateBtn: 'Aktualisieren',
+    cancelBtn: 'Abbrechen',
+    noWeaponSelected: 'Wähle eine Waffe',
+    searchInstructions: 'Nutze die Suche im Header, um deine Wunschliste zu bearbeiten.',
+    langEn: 'English',
+    langDe: 'Deutsch',
+    langEnDesc: 'Standard-Metadaten. Am besten geeignet für den Export in Apps wie DIM oder Little Light.',
+    langDeDesc: 'Vollständig lokalisierte Daten. Ideal, um Perk-Effekte und Beschreibungen auf Deutsch zu lesen.'
+  }
+};
+
 function App() {
+  const [lang, setLang] = useState<Language>(() => {
+    const saved = localStorage.getItem('d2_wishlist_lang');
+    return (saved === 'de' || saved === 'en') ? saved : 'en';
+  });
+
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +81,12 @@ function App() {
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  // Auto-reload logic for retryable errors
+  const t = TRANSLATIONS[lang];
+
+  useEffect(() => {
+    localStorage.setItem('d2_wishlist_lang', lang);
+  }, [lang]);
+
   useEffect(() => {
     if (error && error.includes('[RETRY]')) {
       const timer = setInterval(() => {
@@ -45,8 +104,11 @@ function App() {
 
   useEffect(() => {
     async function init() {
+      setLoading(true);
+      setError(null);
+      setProgress(0);
       try {
-        const data = await loadManifest((p) => setProgress(p));
+        const data = await loadManifest(lang, (p) => setProgress(p));
         if (data) {
           setItems(data.items || {});
           setPlugSets(data.plugSets || {});
@@ -61,7 +123,7 @@ function App() {
       }
     }
     init();
-  }, []);
+  }, [lang]);
 
   const handleTogglePerk = (hash: number) => {
     setSelectedPerks(prev => {
@@ -76,7 +138,6 @@ function App() {
   };
 
   const handleSelectWeapon = (weapon: DestinyItemDefinition) => {
-    console.log("Weapon Selected:", weapon.displayProperties?.name, weapon.hash);
     setSelectedWeapon(weapon);
     setSelectedPerks(new Set());
     setNotes('');
@@ -167,7 +228,7 @@ function App() {
     return (
       <div className="loading-overlay">
         <div className="spinner"></div>
-        <h2 style={{ color: 'var(--text-primary)' }}>Loading Manifest...</h2>
+        <h2 style={{ color: 'var(--text-primary)' }}>{t.loading}</h2>
         <div className="progress-bar-container">
           <div className="progress-bar-fill" style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}></div>
         </div>
@@ -181,19 +242,19 @@ function App() {
 
     return (
       <div className="loading-overlay">
-        <h2 style={{ color: '#ef4444' }}>Error Loading Manifest</h2>
+        <h2 style={{ color: '#ef4444' }}>{t.errorTitle}</h2>
         <p style={{ maxWidth: '400px', textAlign: 'center' }}>{displayError}</p>
         
         {isRetryable ? (
           <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
-            <p style={{ color: 'var(--text-secondary)' }}>Automatischer Reload in <strong style={{ color: 'var(--accent-color)' }}>{countdown}</strong> Sekunden...</p>
+            <p style={{ color: 'var(--text-secondary)' }}>{t.autoReload} <strong style={{ color: 'var(--accent-color)' }}>{countdown}</strong> {t.seconds}...</p>
             <div className="progress-bar-container" style={{ width: '200px', height: '4px', margin: '1rem auto' }}>
               <div className="progress-bar-fill" style={{ width: `${(countdown / 10) * 100}%`, transition: 'width 1s linear' }}></div>
             </div>
           </div>
         ) : (
           <button className="btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => window.location.reload()}>
-            Manuell neu versuchen
+            {t.retryBtn}
           </button>
         )}
       </div>
@@ -206,11 +267,36 @@ function App() {
         <header className="app-header">
           <div className="header-top">
             <div>
-              <h1 className="app-title">Wishlist Generator</h1>
-              <p className="app-subtitle">Destiny 2 God-Roll Creator</p>
+              <h1 className="app-title">{t.title}</h1>
+              <p className="app-subtitle">{t.subtitle}</p>
             </div>
-            <div className="header-search">
-              <WeaponSearch items={items} searchIndex={searchIndex} onSelect={handleSelectWeapon} />
+            <div className="header-actions">
+              <div className="lang-toggle-container">
+                <button 
+                  className={`lang-btn ${lang === 'en' ? 'active' : ''}`} 
+                  onClick={() => setLang('en')}
+                  title={t.langEnDesc}
+                >
+                  EN
+                </button>
+                <button 
+                  className={`lang-btn ${lang === 'de' ? 'active' : ''}`} 
+                  onClick={() => setLang('de')}
+                  title={t.langDeDesc}
+                >
+                  DE
+                </button>
+                <div className="lang-helper">
+                  <Info size={14} />
+                  <div className="lang-tooltip">
+                    <p><strong>EN:</strong> {t.langEnDesc}</p>
+                    <p><strong>DE:</strong> {t.langDeDesc}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="header-search">
+                <WeaponSearch items={items} searchIndex={searchIndex} onSelect={handleSelectWeapon} lang={lang} />
+              </div>
             </div>
           </div>
         </header>
@@ -219,15 +305,21 @@ function App() {
           <section className="column-left">
             <div className="section-header">
               <ListChecks size={20} />
-              <h2>My Wishlist ({wishlistEntries.length})</h2>
+              <h2>{t.myWishlist} ({wishlistEntries.length})</h2>
             </div>
             <WishlistManager 
               entries={wishlistEntries}
               items={items}
+              lang={lang}
               onExport={handleExport}
               onImport={handleImport}
               onRemove={(index) => setWishlistEntries(prev => prev.filter((_, i) => i !== index))}
               onSelectEntry={handleSelectEntry}
+              labels={{
+                 header: t.myWishlist,
+                 importBtn: lang === 'de' ? 'JSON Importieren' : 'Import JSON',
+                 exportBtn: lang === 'de' ? 'Exportieren als' : 'Export as'
+              }}
             />
           </section>
 
@@ -236,7 +328,7 @@ function App() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div className="section-header">
                   <Layout size={20} />
-                  <h2>Perk Configuration</h2>
+                  <h2>{t.perkConfig}</h2>
                 </div>
                 
                 <PerkSelector 
@@ -246,23 +338,24 @@ function App() {
                   socketCategories={socketCategories}
                   selectedPerks={selectedPerks}
                   onTogglePerk={handleTogglePerk}
+                  lang={lang}
                 />
                 
                 <div className="card glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <h3 className="card-title">Save God-Roll</h3>
+                  <h3 className="card-title">{t.saveGodRoll}</h3>
                   <input 
                     type="text" 
                     className="input-primary" 
-                    placeholder="Notes (e.g. PvP, Raid, etc.)" 
+                    placeholder={t.notesPlaceholder}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                   />
                   <div style={{ display: 'flex', gap: '1rem' }}>
                     <button className="btn-primary" onClick={handleSaveEntry} style={{ flex: 1, justifyContent: 'center' }}>
-                      {editingIndex !== null ? <><Check size={18} /> Update</> : <><PlusCircle size={18} /> Add</>}
+                      {editingIndex !== null ? <><Check size={18} /> {t.updateBtn}</> : <><PlusCircle size={18} /> {t.addBtn}</>}
                     </button>
                     <button className="btn-secondary" onClick={() => { setSelectedWeapon(null); setEditingIndex(null); }} style={{ flex: 1, justifyContent: 'center' }}>
-                      Cancel
+                      {t.cancelBtn}
                     </button>
                   </div>
                 </div>
@@ -270,8 +363,8 @@ function App() {
             ) : (
               <div className="card glass-panel empty-state">
                 <Database size={48} style={{ marginBottom: '1rem' }} />
-                <h3>Choose a weapon</h3>
-                <p>Search in the header to start building your wishlist entries.</p>
+                <h3>{t.noWeaponSelected}</h3>
+                <p>{t.searchInstructions}</p>
               </div>
             )}
           </section>

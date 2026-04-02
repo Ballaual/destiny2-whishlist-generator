@@ -108,6 +108,7 @@ export async function fetchWithProgress(url: string, onProgress?: (progress: num
 const SCHEMA_VERSION = 'v2';
 
 export async function loadManifest(
+  lang: 'en' | 'de' = 'en',
   onProgress?: (progress: number) => void
 ): Promise<{ 
     items: Record<string, DestinyItemDefinition>, 
@@ -116,12 +117,15 @@ export async function loadManifest(
     searchIndex: SearchIndex 
 }> {
   
-  // Step 1: Check cache & Schema
+  // Step 1: Check cache & Schema & Language
   const cachedSchema = await manifestCache.getItem<string>('schema_version');
-  if (cachedSchema !== SCHEMA_VERSION) {
-    console.log("Manifest Schema Outdated. Clearing cache...");
+  const cachedLang = await manifestCache.getItem<string>('current_lang');
+  
+  if (cachedSchema !== SCHEMA_VERSION || cachedLang !== lang) {
+    console.log("Manifest Schema or Language Outdated. Clearing cache...");
     await manifestCache.clear();
     await manifestCache.setItem('schema_version', SCHEMA_VERSION);
+    await manifestCache.setItem('current_lang', lang);
   }
 
   let items = await manifestCache.getItem<Record<string, DestinyItemDefinition>>('items');
@@ -158,37 +162,38 @@ export async function loadManifest(
 
   // Step 3: Compare versions or check if missing
   if (!items || !plugSets || !socketCategories || !searchIndex || cachedVersion !== currentVersion) {
-    await manifestCache.clear();
     await manifestCache.setItem('version', currentVersion);
 
-    const itemsEnUrl = `${BUNGIE_ROOT}${pathsEn.DestinyInventoryItemDefinition}`;
-    const plugSetsUrl = `${BUNGIE_ROOT}${pathsEn.DestinyPlugSetDefinition}`;
-    const socketCategoriesUrl = `${BUNGIE_ROOT}${pathsEn.DestinySocketCategoryDefinition}`;
-    
-    // Using Lite definition for German just for names
-    const itemsDeUrl = `${BUNGIE_ROOT}${pathsDe.DestinyInventoryItemLiteDefinition}`;
+    // Get URLs for the requested language (Full) and the other (Lite) for search
+    const mainPaths = lang === 'en' ? pathsEn : pathsDe;
+    const secondaryPaths = lang === 'en' ? pathsDe : pathsEn;
+
+    const itemsMainUrl = `${BUNGIE_ROOT}${mainPaths.DestinyInventoryItemDefinition}`;
+    const plugSetsMainUrl = `${BUNGIE_ROOT}${mainPaths.DestinyPlugSetDefinition}`;
+    const socketCategoriesMainUrl = `${BUNGIE_ROOT}${mainPaths.DestinySocketCategoryDefinition}`;
+    const itemsSecondaryUrl = `${BUNGIE_ROOT}${secondaryPaths.DestinyInventoryItemLiteDefinition}`;
 
     try {
-      if(onProgress) onProgress(1); // Handshake ok
+      if(onProgress) onProgress(1);
       
-      // Load English Full
-      const newItemsEn = await fetchWithProgress(itemsEnUrl, (p) => {
-        if(onProgress) onProgress(1 + (p * 0.6)); // 60% of total
+      // Load Main Language Full
+      const newItemsMain = await fetchWithProgress(itemsMainUrl, (p) => {
+        if(onProgress) onProgress(1 + (p * 0.6)); // 60%
       });
 
-      // Load German Lite
-      const newItemsDe = await fetchWithProgress(itemsDeUrl, (p) => {
-        if(onProgress) onProgress(61 + (p * 0.15)); // 15% of total
+      // Load Secondary Language Lite for Search
+      const newItemsSecondary = await fetchWithProgress(itemsSecondaryUrl, (p) => {
+        if(onProgress) onProgress(61 + (p * 0.15)); // 15%
       });
       
-      // Load PlugSets
-      const newPlugSets = await fetchWithProgress(plugSetsUrl, (p) => {
-        if(onProgress) onProgress(76 + (p * 0.15)); // 15% of total
+      // Load Main PlugSets
+      const newPlugSets = await fetchWithProgress(plugSetsMainUrl, (p) => {
+        if(onProgress) onProgress(76 + (p * 0.15)); // 15%
       });
 
-      // Load SocketCategories
-      const newSocketCategories = await fetchWithProgress(socketCategoriesUrl, (p) => {
-        if(onProgress) onProgress(91 + (p * 0.09)); // 9% of total
+      // Load Main SocketCategories
+      const newSocketCategories = await fetchWithProgress(socketCategoriesMainUrl, (p) => {
+        if(onProgress) onProgress(91 + (p * 0.09)); // 9%
       });
 
       // Build normalized dictionaries and search index
@@ -197,16 +202,16 @@ export async function loadManifest(
       const normalizedSocketCategories: Record<string, DestinySocketCategoryDefinition> = {};
       const newSearchIndex: SearchIndex = {};
 
-      for (const hash in newItemsEn) {
+      for (const hash in newItemsMain) {
           const unsignedHash = (parseInt(hash, 10) >>> 0).toString();
-          const itemEn = newItemsEn[hash];
-          const itemDe = newItemsDe[hash];
-          normalizedItems[unsignedHash] = itemEn;
+          const itemMain = newItemsMain[hash];
+          const itemSecondary = newItemsSecondary[hash];
+          normalizedItems[unsignedHash] = itemMain;
 
-          if (itemEn.displayProperties?.name) {
+          if (itemMain.displayProperties?.name) {
               newSearchIndex[parseInt(unsignedHash, 10)] = {
-                  en: itemEn.displayProperties.name,
-                  de: itemDe?.displayProperties?.name || itemEn.displayProperties.name
+                  en: lang === 'en' ? itemMain.displayProperties.name : (itemSecondary?.displayProperties?.name || itemMain.displayProperties.name),
+                  de: lang === 'de' ? itemMain.displayProperties.name : (itemSecondary?.displayProperties?.name || itemMain.displayProperties.name)
               };
           }
       }

@@ -8,6 +8,7 @@ interface PerkSelectorProps {
   socketCategories: Record<string, DestinySocketCategoryDefinition>;
   selectedPerks: Set<number>;
   onTogglePerk: (hash: number) => void;
+  lang?: 'en' | 'de';
 }
 
 // Explicitly ignore these - anything else will be shown if it contains plugs
@@ -19,9 +20,9 @@ const BLACKLIST_CATEGORY_HASHES = [
   1053423714, // Trackers
 ];
 
-export function PerkSelector({ weapon, items, plugSets, socketCategories, selectedPerks, onTogglePerk }: PerkSelectorProps) {
+export function PerkSelector({ weapon, items, plugSets, socketCategories, selectedPerks, onTogglePerk, lang = 'en' }: PerkSelectorProps) {
   if (!weapon || !weapon.sockets) {
-    return <div className="card glass-panel"><p>This weapon has no configurable perks.</p></div>;
+    return <div className="card glass-panel"><p>{lang === 'de' ? 'Diese Waffe hat keine konfigurierbaren Perks.' : 'This weapon has no configurable perks.'}</p></div>;
   }
 
   const isEnhancedPerk = (item: DestinyItemDefinition) => {
