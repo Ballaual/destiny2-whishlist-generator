@@ -82,8 +82,7 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
         const name = item.displayProperties.name || '';
         
         if (!name || name === 'Classified' || name === 'Empty Mod Socket' || name === 'Default Shader' || name === 'Kill Tracker' || name.includes('Ornament')) return false;
-        if (item.itemCategoryHashes?.includes(41)) return false; // Shaders
-        if (item.itemCategoryHashes?.includes(59)) return false; // Mods
+        if (item.itemCategoryHashes?.includes(41)) return false; // Shaders ONLY
         if (item.redacted) return false;
         
         return true;
@@ -103,29 +102,32 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
     });
   }
 
-  // Try whitelisted categories first, but if that yields nothing, try EVERYTHING
+  // Try categorized extraction first
   let perkColumns = validSocketIndices
     .map(idx => ({ index: idx, plugs: getPlugsForSocket(weapon.sockets!.socketEntries[idx]) }))
     .filter(col => col.plugs.length > 0);
   
+  // SUPER-EXTRACTOR FALLBACK: If no perks found via categories, scan EVERYTHING
   if (perkColumns.length === 0) {
+    console.warn(`[PerkSelector] No perks found in standard categories for ${weapon.displayProperties?.name}. Engaging Super-Extractor...`);
     perkColumns = weapon.sockets.socketEntries
       .map((_, idx) => ({ index: idx, plugs: getPlugsForSocket(weapon.sockets!.socketEntries[idx]) }))
       .filter(col => col.plugs.length > 0)
-      .slice(0, 15); // Safety limit
+      .slice(0, 12); // Limit to first 12 columns for safety
   }
 
   if (perkColumns.length === 0) {
     const debugInfo = weapon.sockets.socketCategories?.map(c => {
-        const def = socketCategories[(c.socketCategoryHash >>> 0).toString()];
+        const uHash = (c.socketCategoryHash >>> 0).toString();
+        const def = socketCategories[uHash] || socketCategories[c.socketCategoryHash.toString()];
         return `${def?.displayProperties?.name || 'Unknown'} (${c.socketCategoryHash})`;
     }).join(' | ') || 'None';
 
     return (
-      <div className="card glass-panel">
-        <p>No perk variations available for this weapon.</p>
-        <p style={{ fontSize: '0.7rem', marginTop: '1rem', color: 'var(--text-secondary)' }}>
-          Debug: {debugInfo}
+      <div className="card glass-panel" style={{ textAlign: 'center', padding: '3rem' }}>
+        <p style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>No perk variations available for this weapon.</p>
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+          Debug Categories: {debugInfo}
         </p>
       </div>
     );

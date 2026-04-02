@@ -6,7 +6,7 @@ import { PerkSelector } from './components/PerkSelector';
 import { WishlistManager } from './components/WishlistManager';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import type { WishlistEntry } from './components/WishlistManager';
-import { PlusCircle, Check, Layout, ListChecks, Info, Search, MousePointer2, Save, FileOutput, RefreshCcw } from 'lucide-react';
+import { PlusCircle, Check, Layout, ListChecks, Search, MousePointer2, Save, FileOutput, RefreshCcw } from 'lucide-react';
 import './index.css';
 
 type Language = 'en' | 'de';
@@ -158,14 +158,17 @@ function App() {
     }
   }, [error]);
 
+  const [status, setStatus] = useState<string>('');
+
   useEffect(() => {
     async function init() {
       setLoading(true);
       setError(null);
       setProgress(0);
       try {
-        const data = await loadManifest(lang, (p) => setProgress(p));
+        const data = await loadManifest(lang, (p) => setProgress(p), (s) => setStatus(s));
         if (data) {
+          console.log(`[App] DATA VERIFIED (${lang}): ${Object.keys(data.items).length} items`);
           setItems(data.items || {});
           setPlugSets(data.plugSets || {});
           setSocketCategories(data.socketCategories || {});
@@ -292,7 +295,10 @@ function App() {
     return (
       <div className="loading-overlay">
         <div className="spinner"></div>
-        <h2 style={{ color: 'var(--text-primary)' }}>{t.loading}</h2>
+        <h2 style={{ color: 'var(--text-primary)', marginBottom: '0.5rem' }}>{t.loading}</h2>
+        <div style={{ fontSize: '0.85rem', color: 'var(--accent-color)', fontWeight: 600, marginBottom: '1rem' }}>
+          {status}
+        </div>
         <div className="progress-bar-container">
           <div className="progress-bar-fill" style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}></div>
         </div>
@@ -359,13 +365,6 @@ function App() {
                 >
                   DE
                 </button>
-                <div className="lang-helper">
-                  <Info size={16} />
-                  <div className="lang-tooltip">
-                    <p><strong>EN:</strong> {t.langEnDesc}</p>
-                    <p><strong>DE:</strong> {t.langDeDesc}</p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -377,25 +376,29 @@ function App() {
               <ListChecks size={20} />
               <h2>{t.myWishlist} ({wishlistEntries.length})</h2>
             </div>
-            <WishlistManager 
-              entries={wishlistEntries}
-              items={items}
-              lang={lang}
-              onExport={handleExport}
-              onImport={handleImport}
-              onRemove={(index) => setWishlistEntries(prev => prev.filter((_, i) => i !== index))}
-              onSelectEntry={handleSelectEntry}
-              labels={{
-                 header: t.myWishlist,
-                 importBtn: lang === 'de' ? 'Importieren' : 'Import JSON',
-                 exportBtn: lang === 'de' ? 'Exportieren' : 'Export as'
-              }}
-            />
-            {items && Object.keys(items).length > 0 && (
-               <button className="btn-secondary" style={{ marginTop: 'auto', border: 'none', fontSize: '0.8rem', opacity: 0.5 }} onClick={handleHardReset}>
-                 <RefreshCcw size={14} /> {t.hardReset}
-               </button>
-            )}
+            <div className="wishlist-sidebar-footer" style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <WishlistManager 
+                entries={wishlistEntries}
+                items={items}
+                lang={lang}
+                onExport={handleExport}
+                onImport={handleImport}
+                onRemove={(index) => setWishlistEntries(prev => prev.filter((_, i) => i !== index))}
+                onSelectEntry={handleSelectEntry}
+                labels={{
+                  header: t.myWishlist,
+                  importBtn: lang === 'de' ? 'Importieren' : 'Import JSON',
+                  exportBtn: lang === 'de' ? 'Exportieren' : 'Export as'
+                }}
+              />
+              <button 
+                className="btn-secondary" 
+                style={{ border: 'none', fontSize: '0.75rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }} 
+                onClick={handleHardReset}
+              >
+                <RefreshCcw size={12} /> {t.hardReset}
+              </button>
+            </div>
           </section>
 
           <section className="column-right">

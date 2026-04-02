@@ -1,6 +1,7 @@
 import localforage from 'localforage';
 
 const BUNGIE_ROOT = 'https://www.bungie.net';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const MANIFEST_API = `${BUNGIE_ROOT}/Platform/Destiny2/Manifest/`;
 
 export const manifestCache = localforage.createInstance({
@@ -55,10 +56,16 @@ export interface DestinySocketCategoryDefinition {
   };
 }
 
-// Map of hashes to names in different languages
 export type SearchIndex = Record<number, { en: string; de: string }>;
 
-export async function fetchWithProgress(url: string, onProgress?: (progress: number) => void): Promise<any> {
+export interface ManifestData {
+  items: Record<string, DestinyItemDefinition>;
+  plugSets: Record<string, DestinyPlugSetDefinition>;
+  socketCategories: Record<string, DestinySocketCategoryDefinition>;
+  searchIndex: SearchIndex;
+}
+
+export async function fetchWithProgress<T = any>(url: string, onProgress?: (progress: number) => void): Promise<T> {
     try {
         const response = await fetch(url, { mode: 'cors' });
         if (!response.ok) {
@@ -105,98 +112,76 @@ export async function fetchWithProgress(url: string, onProgress?: (progress: num
     }
 }
 
-const SCHEMA_VERSION = 'v3';
+const SCHEMA_VERSION = 'v4';
 
 export async function loadManifest(
   lang: 'en' | 'de' = 'en',
-  onProgress?: (progress: number) => void
-): Promise<{ 
-    items: Record<string, DestinyItemDefinition>, 
-    plugSets: Record<string, DestinyPlugSetDefinition>,
-    socketCategories: Record<string, DestinySocketCategoryDefinition>,
-    searchIndex: SearchIndex 
-}> {
-  
-  // Step 1: Check cache & Schema & Language
-  const cachedSchema = await manifestCache.getItem<string>('schema_version');
-  const cachedLang = await manifestCache.getItem<string>('current_lang');
-  
-  if (cachedSchema !== SCHEMA_VERSION || cachedLang !== lang) {
-    console.log("Manifest Schema or Language Outdated. Clearing cache...");
-    await manifestCache.clear();
-    await manifestCache.setItem('schema_version', SCHEMA_VERSION);
-    await manifestCache.setItem('current_lang', lang);
-  }
-
-  let items = await manifestCache.getItem<Record<string, DestinyItemDefinition>>('items');
-  let plugSets = await manifestCache.getItem<Record<string, DestinyPlugSetDefinition>>('plugSets');
-  let socketCategories = await manifestCache.getItem<Record<string, DestinySocketCategoryDefinition>>('socketCategories');
-  let searchIndex = await manifestCache.getItem<SearchIndex>('searchIndex');
-  let cachedVersion = await manifestCache.getItem<string>('version');
-
-  // Step 2: Fetch current manifest version from Bungie
-  let rootResponse;
-  try {
-    rootResponse = await fetch(MANIFEST_API);
-  } catch (e: any) {
-    throw new Error(`Connection Error: Bungie API is unreachable. This might be a temporary network issue. [RETRY]`);
-  }
-
-  if (!rootResponse.ok) {
-     const isRetryable = rootResponse.status === 500 || rootResponse.status === 502 || rootResponse.status === 504;
-     const retrySuffix = isRetryable ? ' [RETRY]' : '';
-     throw new Error(`Bungie Manifest API is currently unavailable (Status: ${rootResponse.status}).${retrySuffix}`);
-  }
-  
-  const manifestRoot = await rootResponse.json();
-  if (!manifestRoot || !manifestRoot.Response) {
-     const isMaintenance = manifestRoot?.ErrorCode === 5 || manifestRoot?.ErrorCode === 4;
-     const errorMsg = isMaintenance ? 'Bungie API is down for maintenance.' : `Bungie API returned an error (ErrorCode: ${manifestRoot?.ErrorCode || 'Unknown'}).`;
-     const retrySuffix = (!isMaintenance && manifestRoot?.ErrorCode !== 404) ? ' [RETRY]' : '';
-     throw new Error(`${errorMsg}${retrySuffix}`);
-  }
-
-  const currentVersion = manifestRoot.Response.version;
-  const pathsEn = manifestRoot.Response.jsonWorldComponentContentPaths.en;
-  const pathsDe = manifestRoot.Response.jsonWorldComponentContentPaths.de;
-
-  // Step 3: Compare versions or check if missing
-  if (!items || !plugSets || !socketCategories || !searchIndex || cachedVersion !== currentVersion) {
-    await manifestCache.setItem('version', currentVersion);
-
-    // Get URLs for the requested language (Full) and the other (Lite) for search
-    const mainPaths = lang === 'en' ? pathsEn : pathsDe;
-    const secondaryPaths = lang === 'en' ? pathsDe : pathsEn;
-
-    const itemsMainUrl = `${BUNGIE_ROOT}${mainPaths.DestinyInventoryItemDefinition}`;
-    const plugSetsMainUrl = `${BUNGIE_ROOT}${mainPaths.DestinyPlugSetDefinition}`;
-    const socketCategoriesMainUrl = `${BUNGIE_ROOT}${mainPaths.DestinySocketCategoryDefinition}`;
-    const itemsSecondaryUrl = `${BUNGIE_ROOT}${secondaryPaths.DestinyInventoryItemLiteDefinition}`;
-
+  onProgress?: (progress: number) => void,
+  onStatus?: (status: string) => void
+): Promise<ManifestData> {
     try {
-      if(onProgress) onProgress(1);
+      const cachedVersion = await manifestCache.getItem('manifest_version');
+      const cachedLang = await manifestCache.getItem('manifest_lang');
       
-      // Load Main Language Full
-      const newItemsMain = await fetchWithProgress(itemsMainUrl, (p) => {
-        if(onProgress) onProgress(1 + (p * 0.6)); // 60%
-      });
+      if (cachedVersion === SCHEMA_VERSION && cachedLang === lang) {
+          onStatus?.(lang === 'de' ? 'Lade Cache...' : 'Loading Cache...');
+          const items = await manifestCache.getItem<Record<string, DestinyItemDefinition>>('items');
+          const plugSets = await manifestCache.getItem<Record<string, DestinyPlugSetDefinition>>('plugSets');
+          const socketCategories = await manifestCache.getItem<Record<string, DestinySocketCategoryDefinition>>('socketCategories');
+          const searchIndex = await manifestCache.getItem<SearchIndex>('searchIndex');
 
-      // Load Secondary Language Lite for Search
-      const newItemsSecondary = await fetchWithProgress(itemsSecondaryUrl, (p) => {
-        if(onProgress) onProgress(61 + (p * 0.15)); // 15%
-      });
+          if (items && plugSets && socketCategories && searchIndex) {
+              console.log(`[Manifest v4] Loaded from cache (${lang}). Items: ${Object.keys(items).length}, PlugSets: ${Object.keys(plugSets).length}`);
+              return { items, plugSets, socketCategories, searchIndex };
+          }
+          console.warn("[Manifest v4] Cache partial or corrupt. Refetching...");
+      }
+
+      console.log(`[Manifest v4] Initializing fresh download (${lang})...`);
+      onStatus?.(lang === 'de' ? 'Initialisiere Download...' : 'Initializing download...');
+      await manifestCache.clear();
+      if(onProgress) onProgress(5);
+
+      onStatus?.(lang === 'de' ? 'Hole Manifest-Metadaten...' : 'Fetching manifest metadata...');
+      const response = await fetch(`${BUNGIE_ROOT}/Platform/Destiny2/Manifest/`);
+      if (!response.ok) throw new Error(`[RETRY] Bungie Manifest API unreachable (Status: ${response.status})`);
       
-      // Load Main PlugSets
-      const newPlugSets = await fetchWithProgress(plugSetsMainUrl, (p) => {
-        if(onProgress) onProgress(76 + (p * 0.15)); // 15%
-      });
+      const manifestMetadata = await response.json();
+      const mainPaths = manifestMetadata.Response.jsonWorldComponentContentPaths[lang];
+      const secondaryPaths = lang === 'en' ? manifestMetadata.Response.jsonWorldComponentContentPaths['de'] : manifestMetadata.Response.jsonWorldComponentContentPaths['en'];
 
-      // Load Main SocketCategories
-      const newSocketCategories = await fetchWithProgress(socketCategoriesMainUrl, (p) => {
-        if(onProgress) onProgress(91 + (p * 0.09)); // 9%
-      });
+      const itemsMainUrl = `${BUNGIE_ROOT}${mainPaths.DestinyInventoryItemDefinition}`;
+      const itemsSecondaryUrl = `${BUNGIE_ROOT}${secondaryPaths.DestinyInventoryItemLiteDefinition || secondaryPaths.DestinyInventoryItemDefinition}`;
+      const plugSetsMainUrl = `${BUNGIE_ROOT}${mainPaths.DestinyPlugSetDefinition}`;
+      const socketCatsUrl = `${BUNGIE_ROOT}${mainPaths.DestinySocketCategoryDefinition}`;
 
-      // Build robust dictionaries with double-hash mapping
+      if(onProgress) onProgress(10);
+
+      onStatus?.(lang === 'de' ? 'Lade Datenbank-Komponenten...' : 'Downloading database components...');
+      const [itemsMainRaw, itemsSecondaryRaw, plugSetsRaw, socketCatsRaw] = await Promise.all([
+          fetchWithProgress<any>(itemsMainUrl, (p) => {
+              onProgress?.(10 + p * 0.4);
+              if (p > 0 && p < 100) onStatus?.(lang === 'de' ? `Lade Items... (${Math.round(p)}%)` : `Downloading Items... (${Math.round(p)}%)`);
+          }),
+          fetchWithProgress<any>(itemsSecondaryUrl, (p) => onProgress?.(50 + p * 0.1)),
+          fetchWithProgress<any>(plugSetsMainUrl, (p) => {
+              onProgress?.(60 + p * 0.2);
+              if (p > 0 && p < 100) onStatus?.(lang === 'de' ? `Lade Perks... (${Math.round(p)}%)` : `Downloading Perks... (${Math.round(p)}%)`);
+          }),
+          fetchWithProgress<any>(socketCatsUrl, (p) => onProgress?.(80 + p * 0.1)),
+      ]);
+
+      onStatus?.(lang === 'de' ? 'Normalisiere Daten...' : 'Normalizing data...');
+
+      const newItemsMain = itemsMainRaw?.Response || itemsMainRaw;
+      const newItemsSecondary = itemsSecondaryRaw?.Response || itemsSecondaryRaw;
+      const newPlugSets = plugSetsRaw?.Response || plugSetsRaw;
+      const newSocketCategories = socketCatsRaw?.Response || socketCatsRaw;
+
+      if (!newItemsMain || !newPlugSets || !newSocketCategories) {
+          throw new Error("Critical manifest component failed to load.");
+      }
+
       const normalizedItems: Record<string, DestinyItemDefinition> = {};
       const normalizedPlugSets: Record<string, DestinyPlugSetDefinition> = {};
       const normalizedSocketCategories: Record<string, DestinySocketCategoryDefinition> = {};
@@ -204,10 +189,9 @@ export async function loadManifest(
 
       for (const rawHash in newItemsMain) {
           const itemMain = newItemsMain[rawHash];
-          const itemSecondary = newItemsSecondary[rawHash];
+          const itemSecondary = (newItemsSecondary as any)[rawHash];
           const unsignedHash = (parseInt(rawHash, 10) >>> 0).toString();
           
-          // Double-map items
           normalizedItems[rawHash] = itemMain;
           normalizedItems[unsignedHash] = itemMain;
 
@@ -234,10 +218,14 @@ export async function loadManifest(
           normalizedSocketCategories[unsignedHash] = socketCat;
       }
 
-      await manifestCache.setItem('items', normalizedItems);
-      await manifestCache.setItem('plugSets', normalizedPlugSets);
-      await manifestCache.setItem('socketCategories', normalizedSocketCategories);
-      await manifestCache.setItem('searchIndex', newSearchIndex);
+      await Promise.all([
+          manifestCache.setItem('items', normalizedItems),
+          manifestCache.setItem('plugSets', normalizedPlugSets),
+          manifestCache.setItem('socketCategories', normalizedSocketCategories),
+          manifestCache.setItem('searchIndex', newSearchIndex),
+          manifestCache.setItem('manifest_version', SCHEMA_VERSION),
+          manifestCache.setItem('manifest_lang', lang)
+      ]);
 
       if(onProgress) onProgress(100);
       return { 
@@ -246,17 +234,19 @@ export async function loadManifest(
           socketCategories: normalizedSocketCategories,
           searchIndex: newSearchIndex 
       };
-    } catch (e: any) {
-      throw new Error(`Failed to load manifest from Bungie: ${e.message}`);
+    } catch (error: any) {
+      console.error("[Manifest Error]", error);
+      throw error;
     }
-  }
-
-  return { items, plugSets, socketCategories, searchIndex };
 }
 
 export async function getManifestData() {
     const items = await manifestCache.getItem<Record<string, DestinyItemDefinition>>('items');
     const plugSets = await manifestCache.getItem<Record<string, DestinyPlugSetDefinition>>('plugSets');
     const socketCategories = await manifestCache.getItem<Record<string, DestinySocketCategoryDefinition>>('socketCategories');
-    return { items, plugSets, socketCategories };
+    return { 
+      items: items || {}, 
+      plugSets: plugSets || {}, 
+      socketCategories: socketCategories || {} 
+    };
 }
