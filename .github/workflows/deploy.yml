@@ -31,7 +31,9 @@ jobs:
         run: npm install
         
       - name: Build
-        run: npm run build
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          VITE_APP_COMMIT=$SHORT_SHA npm run build
         
       - name: Setup Pages
         uses: actions/configure-pages@v4

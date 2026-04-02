@@ -6,6 +6,6 @@ export default defineConfig({
   plugins: [react()],
   base: './',
   define: {
-    __APP_COMMIT__: JSON.stringify('439cc05')
+    __APP_COMMIT__: JSON.stringify(process.env.VITE_APP_COMMIT || 'dev')
   }
 })
