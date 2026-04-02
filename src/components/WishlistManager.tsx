@@ -170,6 +170,10 @@ export function WishlistManager({
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.5rem' }}>
+          <label className="btn-secondary" style={{ cursor: 'pointer', fontSize: '0.85rem' }}>
+            <Upload size={16} /> {labels.importBtn}
+            <input type="file" accept=".json,.txt" onChange={handleFileUpload} style={{ display: 'none' }} />
+          </label>
           <button 
             className="btn-primary" 
             onClick={() => onExport(exportFormat)} 
@@ -178,10 +182,6 @@ export function WishlistManager({
           >
             <Download size={16} /> {labels.exportBtn}
           </button>
-          <label className="btn-secondary" style={{ cursor: 'pointer', fontSize: '0.85rem' }}>
-            <Upload size={16} /> {labels.importBtn}
-            <input type="file" accept=".json,.txt" onChange={handleFileUpload} style={{ display: 'none' }} />
-          </label>
         </div>
       </div>
     </div>

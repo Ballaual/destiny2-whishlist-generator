@@ -577,8 +577,8 @@ function App() {
                 onWishlistDescriptionChange={setWishlistDescription}
                 labels={{
                   header: t.myWishlist,
-                  importBtn: 'Import',
-                  exportBtn: 'Export'
+                  importBtn: lang === 'de' ? 'Importieren' : 'Import',
+                  exportBtn: lang === 'de' ? 'Exportieren' : 'Export'
                 }}
               />
               <button
