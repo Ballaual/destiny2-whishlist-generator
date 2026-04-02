@@ -370,6 +370,13 @@ function App() {
   const [status, setStatus] = useState<string>('');
 
   useEffect(() => {
+    // Clean up reset query param if present
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('reset')) {
+      url.searchParams.delete('reset');
+      window.history.replaceState({}, '', url.pathname + url.search);
+    }
+
     async function init() {
       setLoading(true);
       setError(null);
@@ -417,7 +424,7 @@ function App() {
         await Promise.all(registrations.map(r => r.unregister()));
       }
 
-      window.location.href = window.location.origin + window.location.pathname + '?reset=' + Date.now();
+      window.location.href = window.location.origin + window.location.pathname;
     }
   };
 
