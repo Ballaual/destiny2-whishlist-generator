@@ -657,7 +657,7 @@ function App() {
                 <div className="card glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   <h3 className="card-title">{t.saveGodRoll}</h3>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    {['GodPvE', 'GodPvP', 'PvE', 'PvP'].map(tag => (
+                    {['GodPvE', 'GodPvP', 'PvE', 'PvP', 'Mouse', 'Controller'].map(tag => (
                       <button
                         key={tag}
                         onClick={() => handleToggleTag(tag)}

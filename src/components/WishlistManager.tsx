@@ -134,14 +134,14 @@ export function WishlistManager({
           <input 
             type="text" 
             className="input-primary" 
-            placeholder={lang === 'de' ? 'Name der Wunschliste' : 'Wishlist Name'}
+            placeholder={lang === 'de' ? 'Name der Wunschliste (Optional)' : 'Wishlist Name (Optional)'}
             value={wishlistName}
             onChange={(e) => onWishlistNameChange(e.target.value)}
             style={{ fontSize: '0.85rem', padding: '0.6rem 0.8rem' }}
           />
           <textarea 
             className="input-primary" 
-            placeholder={lang === 'de' ? 'Beschreibung' : 'Description'}
+            placeholder={lang === 'de' ? 'Beschreibung (Optional)' : 'Description (Optional)'}
             value={wishlistDescription}
             onChange={(e) => onWishlistDescriptionChange(e.target.value)}
             style={{ fontSize: '0.85rem', padding: '0.6rem 0.8rem', minHeight: '60px', resize: 'vertical', fontFamily: 'inherit' }}
