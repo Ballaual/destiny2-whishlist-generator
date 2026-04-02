@@ -43,7 +43,7 @@ const TRANSLATIONS = {
     step4Title: '4. Export & Sync',
     step4Desc: 'Export your wishlist as a DIM-compatible text file or JSON for Little Light. Keep your rolls synced across all your apps.',
     hardReset: 'Reset App Data',
-    hardResetConfirm: 'This will clear all cached manifest data and reload the app. Your wishlist will be preserved. Continue?'
+    hardResetConfirm: 'This will DELETE ALL DATA (wishlist, settings, cache) and reload the app. This cannot be undone. Continue?'
   },
   de: {
     title: 'Wishlist Generator',
@@ -76,7 +76,7 @@ const TRANSLATIONS = {
     step4Title: '4. Exportieren',
     step4Desc: 'Exportiere deine Liste als DIM-Textdatei oder JSON für Little Light. Nutze deine God-Rolls in all deinen Lieblings-Apps.',
     hardReset: 'App-Daten zurücksetzen',
-    hardResetConfirm: 'Dies löscht alle gepufferten Manifest-Daten und lädt die App neu. Deine Wunschliste bleibt erhalten. Fortfahren?'
+    hardResetConfirm: 'Dies wird ALLE DATEN LÖSCHEN (Wunschliste, Einstellungen, Cache) und die App neu laden. Dies kann nicht rückgängig gemacht werden. Fortfahren?'
   }
 };
 
@@ -146,6 +146,7 @@ function App() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [wishlistName, setWishlistName] = useState('');
   const [wishlistDescription, setWishlistDescription] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const t = TRANSLATIONS[lang];
 
@@ -194,11 +195,36 @@ function App() {
     init();
   }, [lang]);
 
-  const handleHardReset = () => {
+  const handleHardReset = async () => {
     if (window.confirm(t.hardResetConfirm)) {
-      indexedDB.deleteDatabase('manifest-cache'); // Generic way if locaf_orage is used
-      localStorage.removeItem('manifest_version');
-      window.location.reload();
+      // Clear all storage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Delete IndexedDB
+      if (window.indexedDB && window.indexedDB.databases) {
+        const dbs = await window.indexedDB.databases();
+        dbs.forEach(db => {
+          if (db.name) window.indexedDB.deleteDatabase(db.name);
+        });
+      } else {
+        window.indexedDB.deleteDatabase('manifest-cache');
+      }
+
+      // Clear Caches (Service Workers)
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+
+      // Unregister Service Workers
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(r => r.unregister()));
+      }
+
+      // Final reload bypassing cache
+      window.location.href = window.location.origin + window.location.pathname + '?reset=' + Date.now();
     }
   };
 
@@ -212,6 +238,12 @@ function App() {
       }
       return next;
     });
+  };
+
+  const handleToggleTag = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
   };
 
   const handleSelectWeapon = (weapon: DestinyItemDefinition) => {
@@ -229,7 +261,8 @@ function App() {
       newEntries[editingIndex] = {
         itemHash: selectedWeapon.hash,
         perkHashes: Array.from(selectedPerks),
-        notes: notes.trim()
+        notes: notes.trim(),
+        tags: selectedTags
       };
       setWishlistEntries(newEntries);
       setEditingIndex(null);
@@ -237,12 +270,14 @@ function App() {
       setWishlistEntries(prev => [...prev, {
         itemHash: selectedWeapon.hash,
         perkHashes: Array.from(selectedPerks),
-        notes: notes.trim()
+        notes: notes.trim(),
+        tags: selectedTags
       }]);
     }
     
     setSelectedWeapon(null);
     setSelectedPerks(new Set());
+    setSelectedTags([]);
     setNotes('');
   };
 
@@ -250,11 +285,12 @@ function App() {
     if (wishlistEntries.length === 0) return;
     let content = '';
     let mimeType = 'application/json';
-    let fileName = 'destiny2_wishlist.json';
+    const safeName = (wishlistName || 'whishlist').trim().toLowerCase().replace(/\s+/g, '_');
+    let fileName = `destiny2_whishlist_${safeName}.json`;
 
     try {
       if (format === 'internal') {
-        content = JSON.stringify({ source: 'Destiny 2 Wishlist Generator', version: '1.0', exportedAt: new Date().toISOString(), entries: wishlistEntries }, null, 2);
+        content = JSON.stringify({ source: 'Destiny 2 Wishlist Generator', name: wishlistName, description: wishlistDescription, version: '1.0', exportedAt: new Date().toISOString(), entries: wishlistEntries }, null, 2);
       } else if (format === 'littlelight') {
         const littleLightData = {
           name: wishlistName || 'My Wishlist',
@@ -266,27 +302,28 @@ function App() {
               description: entry.notes || "",
               hash: entry.itemHash,
               plugs: entry.perkHashes.map(h => [h]),
-              tags: ["GodPVE"]
+              tags: entry.tags && entry.tags.length > 0 ? entry.tags : ["GodPVE"]
             };
           })
         };
         content = JSON.stringify(littleLightData, null, 2);
+        fileName = `littlelight_${safeName}.json`;
       } else if (format === 'dim') {
         const header = `title:${wishlistName || 'My Wishlist'}\ndescription:${wishlistDescription || 'Exported from Destiny 2 Wishlist Generator'}\n\n`;
         const entries = wishlistEntries.map(entry => {
           const weapon = items[(entry.itemHash >>> 0).toString()];
           const weaponName = weapon?.displayProperties?.name || "Unknown Weapon";
-          const notes = entry.notes ? `tags:god-pve, ${entry.notes}` : "tags:god-pve";
+          const tagsStr = entry.tags && entry.tags.length > 0 ? entry.tags.map(t => t.toLowerCase()).join(',') : "god-pve";
+          const notes = entry.notes ? `tags:${tagsStr}, ${entry.notes}` : `tags:${tagsStr}`;
           
-          return `// ${weaponName} (god-pve)\n//notes: ${notes}\ndimwishlist:item=${entry.itemHash}${entry.perkHashes.length > 0 ? `&perks=${entry.perkHashes.join(',')}` : ''}`;
+          return `// ${weaponName} (${tagsStr})\n//notes: ${notes}\ndimwishlist:item=${entry.itemHash}${entry.perkHashes.length > 0 ? `&perks=${entry.perkHashes.join(',')}` : ''}`;
         }).join('\n\n');
         content = header + entries;
         mimeType = 'text/plain';
-        fileName = 'destiny2_wishlist.txt';
+        fileName = `destiny2_whishlist_dim_${safeName}.txt`;
       }
 
       if (!content) return;
-      console.log('Export Content:', content);
       const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -316,6 +353,7 @@ function App() {
     if (weapon) {
       setSelectedWeapon(weapon);
       setSelectedPerks(new Set(entry.perkHashes));
+      setSelectedTags(entry.tags || []);
       setNotes(entry.notes || '');
       setEditingIndex(wishlistEntries.indexOf(entry));
     }
@@ -442,6 +480,16 @@ function App() {
                   <Layout size={20} />
                   <h2>{t.perkConfig}</h2>
                 </div>
+
+                {selectedWeapon.screenshot && (
+                  <div className="weapon-screenshot-container card glass-panel" style={{ padding: 0, overflow: 'hidden', height: '180px' }}>
+                    <img 
+                      src={`https://www.bungie.net${selectedWeapon.screenshot}`} 
+                      alt="Weapon Screenshot" 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }}
+                    />
+                  </div>
+                )}
                 
                 <PerkSelector 
                   weapon={selectedWeapon}
@@ -455,6 +503,17 @@ function App() {
                 
                 <div className="card glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   <h3 className="card-title">{t.saveGodRoll}</h3>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    {['GodPvE', 'GodPvP', 'PvE', 'PvP'].map(tag => (
+                      <button 
+                        key={tag}
+                        onClick={() => handleToggleTag(tag)}
+                        className={`tag-btn ${selectedTags.includes(tag) ? 'active' : ''}`}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
                   <input 
                     type="text" 
                     className="input-primary" 

@@ -17,6 +17,7 @@ export interface DestinyItemDefinition {
     icon: string;
     hasIcon: boolean;
   };
+  screenshot?: string;
   redacted?: boolean;
   itemCategoryHashes?: number[];
   inventory?: {

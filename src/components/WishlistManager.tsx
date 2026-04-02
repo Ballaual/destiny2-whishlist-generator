@@ -6,6 +6,7 @@ export interface WishlistEntry {
   itemHash: number;
   perkHashes: number[];
   notes?: string;
+  tags?: string[];
 }
 
 interface WishlistManagerProps {
@@ -91,8 +92,15 @@ export function WishlistManager({
                     )}
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{weapon.displayProperties.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        {entry.perkHashes.length} Perks {entry.notes && `• ${entry.notes}`}
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.2rem' }}>
+                        {entry.tags && entry.tags.length > 0 && (
+                          <div style={{ display: 'flex', gap: '0.25rem' }}>
+                            {entry.tags.map(tag => (
+                              <span key={tag} className="tag-pill" style={{ fontSize: '0.65rem' }}>{tag}</span>
+                            ))}
+                          </div>
+                        )}
+                        <span>{entry.perkHashes.length} Perks {entry.notes && `• ${entry.notes}`}</span>
                       </div>
                     </div>
                     <button 
