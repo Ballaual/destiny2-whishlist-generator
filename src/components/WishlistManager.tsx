@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trash2, Download, Upload, FileText, Code, Smartphone, ChevronRight, Check, Table } from 'lucide-react';
+import { Trash2, Copy, Download, Upload, FileText, Code, Smartphone, ChevronRight, Check, Table } from 'lucide-react';
 import type { DestinyItemDefinition } from '../lib/manifest';
 
 export interface WishlistEntry {
@@ -18,6 +18,7 @@ interface WishlistManagerProps {
   onExport: (format: string) => void;
   onImport: (entries: WishlistEntry[]) => void;
   onRemove: (index: number) => void;
+  onCopy: (index: number) => void;
   onSelectEntry: (entry: WishlistEntry) => void;
   wishlistName: string;
   onWishlistNameChange: (val: string) => void;
@@ -31,7 +32,7 @@ interface WishlistManagerProps {
 }
 
 export function WishlistManager({ 
-  entries, items, lang, onExport, onImport, onRemove, onSelectEntry, 
+  entries, items, lang, onExport, onImport, onRemove, onCopy, onSelectEntry, 
   wishlistName, onWishlistNameChange, wishlistDescription, onWishlistDescriptionChange, labels 
 }: WishlistManagerProps) {
   const [exportFormat, setExportFormat] = useState('internal');
@@ -60,8 +61,8 @@ export function WishlistManager({
 
   const formats = [
     { id: 'internal', name: 'D2WLG', icon: <Code size={14} /> },
-    { id: 'dim', name: 'DIM', icon: <FileText size={14} /> },
     { id: 'littlelight', name: 'Little Light', icon: <Smartphone size={14} /> },
+    { id: 'dim', name: 'DIM', icon: <FileText size={14} /> },
     { id: 'csv', name: 'CSV', icon: <Table size={14} /> },
   ];
 
@@ -95,28 +96,39 @@ export function WishlistManager({
                     )}
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                        {entry.name || weapon.displayProperties.name}
+                        {entry.name || weapon.displayProperties.name} <span style={{ opacity: 0.5, fontSize: '0.8em' }}>({entry.itemHash})</span>
                       </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.2rem' }}>
                         {entry.tags && entry.tags.length > 0 && (
-                          <div style={{ display: 'flex', gap: '0.25rem' }}>
+                          <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
                             {entry.tags.map(tag => (
                               <span key={tag} className="tag-pill" style={{ fontSize: '0.65rem' }}>{tag}</span>
                             ))}
                           </div>
                         )}
-                        <span>
+                        <span style={{ display: 'block', width: '100%' }}>
                           {entry.perkHashes.length} Perks {(entry.notes || entry.description) && `• ${entry.notes || entry.description}`}
                         </span>
                       </div>
                     </div>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); onRemove(idx); }}
-                      style={{ background: 'transparent', color: 'var(--text-secondary)', padding: '0.4rem' }}
-                      className="hover-danger"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); onCopy(idx); }}
+                        style={{ background: 'transparent', color: 'var(--text-secondary)', padding: '0.4rem' }}
+                        className="hover-primary"
+                        title={lang === 'de' ? 'Kopieren' : 'Copy'}
+                      >
+                        <Copy size={16} />
+                      </button>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); onRemove(idx); }}
+                        style={{ background: 'transparent', color: 'var(--text-secondary)', padding: '0.4rem' }}
+                        className="hover-danger"
+                        title={lang === 'de' ? 'Löschen' : 'Delete'}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                     <ChevronRight size={16} style={{ opacity: 0.3 }} />
                   </div>
                 </div>

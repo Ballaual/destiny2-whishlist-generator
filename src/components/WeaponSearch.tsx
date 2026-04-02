@@ -61,7 +61,7 @@ export function WeaponSearch({ items, searchIndex, onSelect, lang = 'en' }: Weap
         <input
           type="text"
           className="header-search-input"
-          placeholder={lang === 'de' ? "Waffe suchen (DE/EN)..." : "Search weapon (EN/DE)..."}
+          placeholder={lang === 'de' ? "Waffe suchen (Name or Id)..." : "Search weapon (Name or Id)..."}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => { if (results.length > 0) setIsOpen(true) }}
