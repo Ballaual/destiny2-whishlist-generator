@@ -1,4 +1,4 @@
-import { Crosshair, Star } from 'lucide-react';
+import { Star } from 'lucide-react';
 import type { DestinyItemDefinition, DestinyPlugSetDefinition, DestinySocketCategoryDefinition } from '../lib/manifest';
 
 interface PerkSelectorProps {
@@ -135,9 +135,6 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
 
   return (
     <div className="card glass-panel">
-      <h2 className="card-title">
-        <Crosshair size={24} /> {weapon.displayProperties?.name || 'Weapon Perks'} <span style={{ opacity: 0.5, fontSize: '0.7em', fontWeight: 400, marginLeft: '0.5rem' }}>({weapon.hash})</span>
-      </h2>
       <div className="perk-grid">
         {perkColumns.map((col: any, colIdx: number) => (
           <div key={`${col.index}-${colIdx}`} className="perk-column">

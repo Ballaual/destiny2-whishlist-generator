@@ -6,11 +6,12 @@ import { PerkSelector } from './components/PerkSelector';
 import { WishlistManager } from './components/WishlistManager';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import type { WishlistEntry } from './components/WishlistManager';
-import { PlusCircle, Check, Layout, ListChecks, Search, MousePointer2, Save, FileOutput, RefreshCcw, Sun, Moon, Monitor } from 'lucide-react';
+import { PlusCircle, Check, Search, Save, FileOutput, Settings2, Monitor, Moon, Sun, AlertTriangle, RefreshCcw } from 'lucide-react';
 import './index.css';
 
 type Language = 'en' | 'de';
 type Theme = 'light' | 'dark' | 'system';
+declare const __APP_COMMIT__: string;
 
 const TRANSLATIONS = {
   en: {
@@ -22,8 +23,8 @@ const TRANSLATIONS = {
     seconds: 'seconds',
     myWishlist: 'My Wishlist',
     perkConfig: 'Perk Configuration',
-    saveGodRoll: 'Save God-Roll',
-    notesPlaceholder: 'Notes (e.g. PvP, Raid, etc.)',
+    saveGodRoll: 'Tags & Info',
+    notesPlaceholder: 'Notes (Optional)',
     entryNamePlaceholder: 'Roll Name (Optional)',
     entryDescriptionPlaceholder: 'Description (Optional)',
     addBtn: 'Add',
@@ -44,24 +45,63 @@ const TRANSLATIONS = {
     step3Desc: 'Add your selected combination to your personal wishlist on the left. You can add multiple rolls for the same weapon.',
     step4Title: '4. Export & Sync',
     step4Desc: 'Export your wishlist as a DIM-compatible text file or JSON for Little Light. Keep your rolls synced across all your apps.',
-    hardReset: 'Reset App Data',
+    hardReset: 'Reset all Data',
     hardResetConfirm: 'This will DELETE ALL DATA (wishlist, settings, cache) and reload the app. This cannot be undone. Continue?',
-    themeLight: 'Light',
-    themeDark: 'Dark',
-    themeSystem: 'System'
+    themeLight: 'Light Mode',
+    themeDark: 'Dark Mode',
+    themeSystem: 'System',
+    searchPlaceholder: 'Weapon search (Name or Id)...',
+    exportDIM: 'Export DIM',
+    exportLL: 'Export Little Light',
+    exportCSV: 'Export CSV',
+    exportInternal: 'Export JSON',
+    importBtn: 'Import JSON',
+    wishlistNameLabel: 'Wishlist Name',
+    wishlistDescLabel: 'Wishlist Description',
+    sourceLabel: 'Source',
+    archetypeLabel: 'Archetype',
+    welcomeFeatures: 'Features & Tips',
+    featureManifest: 'Direct Sync: Uses the live Bungie Manifest for up-to-date data.',
+    featureExports: 'Smart Export: Supports DIM (notes & tags), CSV, and LittleLight.',
+    featureOffline: 'Offline Support: Once loaded, you can manage your rolls offline.',
+    featurePrivacy: 'Privacy First: No cloud storage; all data stays in your browser.',
+    ammoPrimary: 'Primary',
+    ammoSpecial: 'Special',
+    ammoHeavy: 'Heavy',
+    damageKinetic: 'Kinetic',
+    damageArc: 'Arc',
+    damageSolar: 'Solar',
+    damageVoid: 'Void',
+    damageStasis: 'Stasis',
+    damageStrand: 'Strand',
+    rarityExotic: 'Exotic',
+    rarityLegendary: 'Legendary',
+    rarityRare: 'Rare',
+    rarityCommon: 'Common',
+    filterAllRarities: 'All Rarities',
+    filterAllTypes: 'All Types',
+    tagsHeader: 'Tags & Info',
+    addBtnShort: 'Add',
+    updateBtnShort: 'Update'
   },
   de: {
     title: 'D2 Wishlist Generator',
-    loading: 'Lade Manifest...',
+    subtitle: 'Erstelle professionelle God-Roll Wunschlisten für Destiny 2.',
+    howToTitle: 'Anleitung',
+    step1: '1. Suche eine Waffe (Name oder ID), um den Konfigurator zu öffnen.',
+    step2: '2. Wähle deine gewünschten Perks aus (z.B. Perks für PvE oder PvP).',
+    step3: '3. Füge Name, Notizen oder Tags (GodPvE, Controller etc.) hinzu.',
+    step4: '4. Exportiere deine gesamte Liste für DIM, Little Light oder CSV.',
+    loading: 'Lade Metadaten...',
     errorTitle: 'Fehler beim Laden des Manifests',
     retryBtn: 'Manuell neu versuchen',
     autoReload: 'Automatischer Reload in',
     seconds: 'Sekunden',
     myWishlist: 'Meine Wunschliste',
     perkConfig: 'Perk-Konfiguration',
-    saveGodRoll: 'God-Roll speichern',
-    notesPlaceholder: 'Notizen (z.B. PvP, Raid, etc.)',
-    entryNamePlaceholder: 'Roll Name (Optional)',
+    saveGodRoll: 'Tags & Info',
+    notesPlaceholder: 'Notizen (Optional)',
+    entryNamePlaceholder: 'Roll-Name (Optional)',
     entryDescriptionPlaceholder: 'Beschreibung (Optional)',
     addBtn: 'Hinzufügen',
     updateBtn: 'Aktualisieren',
@@ -73,7 +113,7 @@ const TRANSLATIONS = {
     langDeDesc: 'Vollständig lokalisierte Daten. Ideal, um Perk-Effekte und Beschreibungen auf Deutsch zu lesen.',
     welcomeTitle: 'Willkommen beim Destiny 2 Wunschlisten Generator',
     welcomeSubtitle: 'Der einfachste Weg, um deine Destiny 2 God-Roll-Wunschlisten zu erstellen und zu exportieren.',
-    step1Title: '1. Waffe suchen',
+    step1Title: '1. Nach Waffen suchen',
     step1Desc: 'Nutze die Suche im Header, um eine Waffe per Name oder ID zu finden. Wir unterstützen deutsche und englische Bezeichnungen.',
     step2Title: '2. Perks wählen',
     step2Desc: 'Klicke auf die Perks, die dein God-Roll haben soll. Du kannst pro Spalte mehrere Perks auswählen.',
@@ -81,15 +121,48 @@ const TRANSLATIONS = {
     step3Desc: 'Füge deine Kombination zu deiner Wunschliste auf der linken Seite hinzu. Du kannst mehrere Rolls pro Waffe speichern.',
     step4Title: '4. Exportieren',
     step4Desc: 'Exportiere deine Liste als DIM-Textdatei oder JSON für Little Light. Nutze deine God-Rolls in all deinen Lieblings-Apps.',
-    hardReset: 'App-Daten zurücksetzen',
+    hardReset: 'Alle Daten löschen',
     hardResetConfirm: 'Dies wird ALLE DATEN LÖSCHEN (Wunschliste, Einstellungen, Cache) und die App neu laden. Dies kann nicht rückgängig gemacht werden. Fortfahren?',
     themeLight: 'Hell',
     themeDark: 'Dunkel',
-    themeSystem: 'System'
+    themeSystem: 'System',
+    searchPlaceholder: 'Waffe suchen (Name oder Id)...',
+    exportDIM: 'Export DIM',
+    exportLL: 'Export Little Light',
+    exportCSV: 'Export CSV',
+    exportInternal: 'Export JSON',
+    importBtn: 'Import JSON',
+    wishlistNameLabel: 'Wunschlisten-Name',
+    wishlistDescLabel: 'Wunschlisten-Beschreibung',
+    sourceLabel: 'Quelle',
+    archetypeLabel: 'Archetyp',
+    welcomeFeatures: 'Funktionen & Tipps',
+    featureManifest: 'Direkt-Sync: Nutzt das Live Bungie Manifest für aktuelle Daten.',
+    featureExports: 'Smart Export: Unterstützt DIM (Notizen & Tags), CSV und LittleLight.',
+    featureOffline: 'Offline-Support: Einmal geladen, kannst du deine Rolls offline verwalten.',
+    featurePrivacy: 'Privatsphäre: Keine Cloud-Speicherung; alle Daten bleiben in deinem Browser.',
+    ammoPrimary: 'Primär',
+    ammoSpecial: 'Spezial',
+    ammoHeavy: 'Schwer',
+    damageKinetic: 'Kinetik',
+    damageArc: 'Arkus',
+    damageSolar: 'Solar',
+    damageVoid: 'Leere',
+    damageStasis: 'Stasis',
+    damageStrand: 'Strang',
+    rarityExotic: 'Exotisch',
+    rarityLegendary: 'Legendär',
+    rarityRare: 'Selten',
+    rarityCommon: 'Gewöhnlich',
+    filterAllRarities: 'Alle Seltenheiten',
+    filterAllTypes: 'Alle Typen',
+    tagsHeader: 'Tags & Info',
+    addBtnShort: 'Hinzufügen',
+    updateBtnShort: 'Aktualisieren'
   }
 };
 
-function IntroView({ t }: { t: any }) {
+function IntroView({ t, lang }: { t: any, lang: string }) {
   return (
     <div className="welcome-container">
       <div className="welcome-hero">
@@ -98,33 +171,63 @@ function IntroView({ t }: { t: any }) {
       </div>
 
       <div className="welcome-grid">
-        <div className="card glass-panel welcome-card">
+        {/* Card 1: Features & Highlights */}
+        <div className="card glass-panel welcome-card" style={{ gridColumn: 'span 1' }}>
           <div className="welcome-card-header">
-            <div className="welcome-card-icon"><Search size={24} /></div>
-            <h3>{t.step1Title}</h3>
+            <div className="welcome-card-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}><Check size={24} /></div>
+          <h3 style={{ color: 'var(--accent-color)' }}>{lang === 'de' ? 'Features' : 'Features'}</h3>
           </div>
-          <p>{t.step1Desc}</p>
+          <ul style={{ listStyle: 'none', padding: 0, margin: '1rem 0 0 0', display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem' }}>
+            <li style={{ display: 'flex', gap: '0.75rem' }}><Check size={14} color="#10b981" style={{ flexShrink: 0, marginTop: '2px' }} /> {t.featureManifest}</li>
+            <li style={{ display: 'flex', gap: '0.75rem' }}><Check size={14} color="#10b981" style={{ flexShrink: 0, marginTop: '2px' }} /> {t.featureExports}</li>
+            <li style={{ display: 'flex', gap: '0.75rem' }}><Check size={14} color="#10b981" style={{ flexShrink: 0, marginTop: '2px' }} /> {t.featureOffline}</li>
+            <li style={{ display: 'flex', gap: '0.75rem' }}><Check size={14} color="#10b981" style={{ flexShrink: 0, marginTop: '2px' }} /> {t.featurePrivacy}</li>
+          </ul>
         </div>
+
+        {/* Card 2: Configuration (Steps 1 & 2) */}
         <div className="card glass-panel welcome-card">
           <div className="welcome-card-header">
-            <div className="welcome-card-icon"><MousePointer2 size={24} /></div>
-            <h3>{t.step2Title}</h3>
+            <div className="welcome-card-icon" style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8' }}><Search size={24} /></div>
+            <h3>{lang === 'de' ? 'Waffen & Perks' : 'Discovery & Crafting'}</h3>
           </div>
-          <p>{t.step2Desc}</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem', fontSize: '0.85rem' }}>
+            <p><strong>{lang === 'de' ? 'Waffen suchen' : 'Search for Weapons'}:</strong> {t.step1Desc}</p>
+            <p><strong>{lang === 'de' ? 'Perks wählen' : 'Select your Perks'}:</strong> {t.step2Desc}</p>
+          </div>
         </div>
+
+        {/* Card 3: Wishlist Management (Step 3) */}
         <div className="card glass-panel welcome-card">
           <div className="welcome-card-header">
-            <div className="welcome-card-icon"><Save size={24} /></div>
-            <h3>{t.step3Title}</h3>
+            <div className="welcome-card-icon" style={{ background: 'rgba(168, 85, 247, 0.1)', color: '#a855f7' }}><Save size={24} /></div>
+            <h3>{lang === 'de' ? 'Verwalten & Organisieren' : 'Manage & Organize'}</h3>
           </div>
-          <p>{t.step3Desc}</p>
+          <div style={{ marginTop: '1rem', fontSize: '0.85rem' }}>
+             <p>{t.step3Desc}</p>
+             <p style={{ marginTop: '0.5rem', opacity: 0.7, fontStyle: 'italic' }}>
+               {lang === 'de' 
+                 ? 'Tipp: Nutze Roll-Namen und Notizen, um deine Favoriten (z.B. "PvP Godroll") schnell wiederzufinden.' 
+                 : 'Tip: Use Roll Names and Notes to quickly identify your favorites like "PvP Godroll".'}
+             </p>
+          </div>
         </div>
+
+        {/* Card 4: Export (Step 4) */}
         <div className="card glass-panel welcome-card">
           <div className="welcome-card-header">
-            <div className="welcome-card-icon"><FileOutput size={24} /></div>
-            <h3>{t.step4Title}</h3>
+            <div className="welcome-card-icon" style={{ background: 'rgba(234, 179, 8, 0.1)', color: '#eab308' }}><FileOutput size={24} /></div>
+            <h3>{lang === 'de' ? 'Export & Sync' : 'Export & Sync'}</h3>
           </div>
-          <p>{t.step4Desc}</p>
+          <div style={{ marginTop: '1rem', fontSize: '0.85rem' }}>
+            <p>{t.step4Desc}</p>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+               <span className="tag-btn" style={{ fontSize: '0.65rem', padding: '0.2rem 0.6rem' }}>D2WLG</span>
+               <span className="tag-btn" style={{ fontSize: '0.65rem', padding: '0.2rem 0.6rem' }}>DIM</span>
+               <span className="tag-btn" style={{ fontSize: '0.65rem', padding: '0.2rem 0.6rem' }}>Little Light</span>
+               <span className="tag-btn" style={{ fontSize: '0.65rem', padding: '0.2rem 0.6rem' }}>CSV</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -141,6 +244,7 @@ function App() {
     const saved = localStorage.getItem('d2_wishlist_theme');
     return (saved === 'light' || saved === 'dark' || saved === 'system') ? saved : 'system';
   });
+
 
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
@@ -291,11 +395,9 @@ function App() {
 
   const handleHardReset = async () => {
     if (window.confirm(t.hardResetConfirm)) {
-      // Clear all storage
       localStorage.clear();
       sessionStorage.clear();
 
-      // Delete IndexedDB
       if (window.indexedDB && window.indexedDB.databases) {
         const dbs = await window.indexedDB.databases();
         dbs.forEach(db => {
@@ -305,19 +407,16 @@ function App() {
         window.indexedDB.deleteDatabase('manifest-cache');
       }
 
-      // Clear Caches (Service Workers)
       if ('caches' in window) {
         const cacheNames = await caches.keys();
         await Promise.all(cacheNames.map(name => caches.delete(name)));
       }
 
-      // Unregister Service Workers
       if ('serviceWorker' in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
         await Promise.all(registrations.map(r => r.unregister()));
       }
 
-      // Final reload bypassing cache
       window.location.href = window.location.origin + window.location.pathname + '?reset=' + Date.now();
     }
   };
@@ -414,12 +513,12 @@ function App() {
         const entries = wishlistEntries.map(entry => {
           const weapon = items[(entry.itemHash >>> 0).toString()];
           const weaponName = weapon?.displayProperties?.name || "Unknown Weapon";
-          const tagsStr = entry.tags && entry.tags.length > 0 ? entry.tags.map(t => t.toLowerCase()).join(',') : "";
           const comments = [];
           if (entry.name) comments.push(entry.name);
           if (entry.description) comments.push(entry.description);
           if (entry.notes) comments.push(entry.notes);
 
+          const tagsStr = entry.tags && entry.tags.length > 0 ? entry.tags.map(t => t.toLowerCase()).join(',') : "";
           const notesStr = tagsStr ? `tags:${tagsStr}${comments.length ? `, ${comments.join(' - ')}` : ''}` : (comments.length ? comments.join(' - ') : '');
 
           const commentPrefix = entry.name ? `${entry.name} [${weaponName}]` : weaponName;
@@ -490,7 +589,6 @@ function App() {
       setWishlistEntries(prev => {
         const newEntries = [...prev];
         const copy = { ...entryToCopy };
-        // Insert right after the original
         newEntries.splice(index + 1, 0, copy);
         return newEntries;
       });
@@ -533,7 +631,7 @@ function App() {
             <button className="btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => window.location.reload()}>
               {t.retryBtn}
             </button>
-            <button className="btn-secondary" style={{ marginTop: '1.5rem' }} onClick={handleHardReset}>
+            <button className="btn-secondary btn-hover-effect" style={{ marginTop: '1.5rem' }} onClick={handleHardReset}>
               <RefreshCcw size={18} /> {t.hardReset}
             </button>
           </div>
@@ -548,7 +646,11 @@ function App() {
         <header className="app-header">
           <div className="header-top">
             <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flex: 1 }}>
-              <div>
+              <div
+                onClick={() => { setSelectedWeaponHash(null); setEditingIndex(null); }}
+                style={{ cursor: 'pointer' }}
+                title={lang === 'de' ? 'Zur Startseite' : 'Back to Home'}
+              >
                 <h1 className="app-title">{t.title}</h1>
               </div>
               <div className="header-search">
@@ -557,6 +659,15 @@ function App() {
             </div>
 
             <div className="header-actions">
+              <button
+                className="btn-danger"
+                title={t.hardReset}
+                onClick={handleHardReset}
+                style={{ marginRight: '0.5rem', padding: '0.4rem 0.6rem' }}
+              >
+                <AlertTriangle size={16} />
+              </button>
+
               <div className="lang-toggle-container" style={{ marginRight: '0.5rem' }}>
                 <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '2px' }}>
                   <button
@@ -606,10 +717,6 @@ function App() {
 
         <main className="main-layout">
           <section className="column-left">
-            <div className="section-header">
-              <ListChecks size={20} />
-              <h2>{t.myWishlist} ({wishlistEntries.length})</h2>
-            </div>
             <div className="wishlist-manager-container" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <WishlistManager
                 entries={wishlistEntries}
@@ -631,98 +738,239 @@ function App() {
                 }}
               />
             </div>
-            <div style={{ marginTop: 'auto', paddingTop: '1rem' }}>
-              <button
-                className="btn-secondary"
-                style={{ width: '100%', border: 'none', fontSize: '0.75rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}
-                onClick={handleHardReset}
-              >
-                <RefreshCcw size={12} /> {t.hardReset}
-              </button>
-            </div>
           </section>
 
           <section className="column-right">
-            {selectedWeapon ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <div className="section-header">
-                  <Layout size={20} />
-                  <h2>{t.perkConfig}</h2>
+            {selectedWeapon ? (() => {
+              const getRarityInfo = () => {
+                const tier = selectedWeapon.inventory?.tierType;
+                if (tier === 6) return { name: t.rarityExotic, color: '#ceb02a', bg: '#ceb02a', border: '#eab308' };
+                if (tier === 5) return { name: t.rarityLegendary, color: '#522f60', bg: '#522f60', border: '#a855f7' };
+                if (tier === 4) return { name: t.rarityRare, color: '#366496', bg: '#366496', border: '#3b82f6' };
+                return { name: t.rarityCommon, color: '#37474f', bg: '#37474f', border: '#94a3b8' };
+              };
+
+              const getAmmoTypeInfo = () => {
+                const type = selectedWeapon.inventory?.ammoType ??
+                  (selectedWeapon as any).ammoType ??
+                  (selectedWeapon as any).equippingBlock?.ammoType;
+
+                if (type === 1) return { label: t.ammoPrimary, color: '#ffffff', icon: '●' };
+                if (type === 2) return { label: t.ammoSpecial, color: '#22c55e', icon: '■' };
+                if (type === 3) return { label: t.ammoHeavy, color: '#a855f7', icon: '◆' };
+
+                const typeName = (selectedWeapon.itemTypeDisplayName || "").toLowerCase();
+                if (typeName.includes('grenade launcher') || typeName.includes('sniper') || typeName.includes('shotgun') || typeName.includes('fusion')) {
+                  return { label: t.ammoSpecial, color: '#22c55e', icon: '■' };
+                }
+                if (typeName.includes('rocket') || typeName.includes('sword') || typeName.includes('linear')) {
+                  return { label: t.ammoHeavy, color: '#a855f7', icon: '◆' };
+                }
+                return { label: t.ammoPrimary, color: '#ffffff', icon: '●' };
+              };
+
+              const getDamageTypeInfo = () => {
+                const weapon = selectedWeapon as any;
+                const hash = selectedWeapon.defaultDamageTypeHash ||
+                  weapon.damageTypeHash ||
+                  weapon.equippingBlock?.damageTypeHash ||
+                  (weapon.damageTypeHashes && weapon.damageTypeHashes[0]);
+
+                // Damage Type Mappings
+                const damageMap: Record<number, any> = {
+                  1847026147: { label: t.damageSolar, color: '#f97316', icon: 'https://www.bungie.net/common/destiny2_content/icons/DestinyDamageTypeDefinition_2a1773e10968f2d088b97c22b22bba9e.png' },
+                  2303181850: { label: t.damageArc, color: '#0ea5e9', icon: 'https://www.bungie.net/common/destiny2_content/icons/DestinyDamageTypeDefinition_092d066688b879c807c3b460afdd61e6.png' },
+                  3454344768: { label: t.damageVoid, color: '#a855f7', icon: 'https://www.bungie.net/common/destiny2_content/icons/DestinyDamageTypeDefinition_ceb2f6197dccf3958bb31cc783eb97a0.png' },
+                  151347233: { label: t.damageStasis, color: '#526cf4', icon: 'https://www.bungie.net/common/destiny2_content/icons/DestinyDamageTypeDefinition_530c4c3e7981dc2aefd24fd3293482bf.png' },
+                  3949783978: { label: t.damageStrand, color: '#2bca48', icon: 'https://www.bungie.net/common/destiny2_content/icons/DestinyDamageTypeDefinition_b2fe51a94f3533f97079dfa0d27a4096.png' },
+                  3373582085: { label: t.damageKinetic, color: '#f1f5f9', icon: 'https://www.bungie.net/common/destiny2_content/icons/DestinyDamageTypeDefinition_3385a924fd3ccb92c343ade19f19a370.png' }
+                };
+
+                if (hash && damageMap[hash]) return damageMap[hash];
+
+                // Fallbacks for Enums (Bungie damageType enum)
+                const typeEnum = weapon.damageType || weapon.defaultDamageType;
+                if (typeEnum === 3) return damageMap[1847026147]; // Solar
+                if (typeEnum === 2) return damageMap[2303407701]; // Arc
+                if (typeEnum === 4) return damageMap[3453347170]; // Void
+                if (typeEnum === 6) return damageMap[1513472331]; // Stasis
+                if (typeEnum === 7) return damageMap[3949783973]; // Strand
+
+                return damageMap[3357305091]; // Kinetic
+              };
+
+              const rarity = getRarityInfo();
+              const ammo = getAmmoTypeInfo();
+              const damage = getDamageTypeInfo();
+
+              return (
+                <div className="editor-layout">
+                  <div className="editor-main" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div className="section-header">
+                      <div style={{ padding: '0.4rem', borderRadius: '6px', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--accent-color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Settings2 size={18} />
+                      </div>
+                      <h2>{t.perkConfig}</h2>
+                    </div>
+                    <PerkSelector
+                      weapon={selectedWeapon}
+                      items={items}
+                      plugSets={plugSets}
+                      socketCategories={socketCategories}
+                      selectedPerks={selectedPerks}
+                      onTogglePerk={handleTogglePerk}
+                      lang={lang}
+                    />
+                  </div>
+
+                  <div className="editor-sticky-panel">
+                    {selectedWeapon.screenshot && (
+                      <div className="weapon-screenshot-container card glass-panel" style={{
+                        padding: 0,
+                        overflow: 'hidden',
+                        height: '220px',
+                        position: 'relative',
+                        border: `2px solid ${rarity.color}33`,
+                        boxShadow: `0 0 20px ${rarity.color}11`
+                      }}>
+                        <img
+                          src={`https://www.bungie.net${selectedWeapon.screenshot}`}
+                          alt="Weapon Screenshot"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                        <div style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          background: 'linear-gradient(transparent, rgba(0,0,0,0.9))',
+                          padding: '1.25rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.4rem'
+                        }}>
+                          <div style={{
+                            fontSize: '1.4rem',
+                            fontWeight: 800,
+                            color: 'white',
+                            textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                            letterSpacing: '-0.02em'
+                          }}>
+                            {selectedWeapon.displayProperties?.name}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', opacity: 0.6, color: 'white', fontWeight: 500 }}>
+                            ID: {selectedWeapon.hash}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="card glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.75rem', marginBottom: '0.25rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '0.75rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                            <div style={{
+                              background: rarity.bg,
+                              border: `1px solid ${rarity.border || rarity.color}`,
+                              boxShadow: `0 0 10px ${rarity.color}44`,
+                              color: '#fff',
+                              padding: '0.15rem 0.5rem',
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              fontWeight: 900,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.08em',
+                              textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                            }}>
+                              {rarity.name}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 700, letterSpacing: '0.05em' }}>
+                              {selectedWeapon.itemTypeDisplayName}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, color: damage.color }}>
+                              <img src={damage.icon} alt="" style={{ width: '16px', height: '16px' }} />
+                              <span style={{ textTransform: 'uppercase' }}>{damage.label}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, color: ammo.color }}>
+                              <span style={{ fontSize: '1rem', lineHeight: 1 }}>{ammo.icon}</span>
+                              <span style={{ textTransform: 'uppercase' }}>{ammo.label}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: '1.4' }}>
+                          {selectedWeapon.flavorText || selectedWeapon.displayProperties?.description}
+                        </div>
+                        {selectedWeapon.displaySource && (
+                          <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            <strong>{t.sourceLabel}:</strong> {selectedWeapon.displaySource}
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        {['GodPvE', 'GodPvP', 'PvE', 'PvP', 'Mouse', 'Controller', 'D2WLG'].map(tag => (
+                          <button
+                            key={tag}
+                            onClick={() => handleToggleTag(tag)}
+                            className={`tag-btn ${selectedTags.includes(tag) ? 'active' : ''}`}
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <input
+                          type="text"
+                          className="input-primary"
+                          placeholder={t.entryNamePlaceholder}
+                          value={entryName}
+                          onChange={(e) => setEntryName(e.target.value)}
+                          style={{ fontSize: '0.85rem', padding: '0.8rem 1rem', height: '44px' }}
+                        />
+                        <input
+                          type="text"
+                          className="input-primary"
+                          placeholder={t.notesPlaceholder}
+                          value={notes}
+                          onChange={(e) => setNotes(e.target.value)}
+                          style={{ fontSize: '0.85rem', padding: '0.8rem 1rem', height: '44px' }}
+                        />
+                      </div>
+                      <textarea
+                        className="input-primary"
+                        placeholder={t.entryDescriptionPlaceholder}
+                        value={entryDescription}
+                        onChange={(e) => setEntryDescription(e.target.value)}
+                        style={{ fontSize: '0.85rem', minHeight: '80px', resize: 'vertical', padding: '0.8rem 1rem', lineHeight: '1.5' }}
+                      />
+                      <div style={{ display: 'flex', gap: '1rem' }}>
+                        <button className="btn-primary btn-hover-effect" onClick={handleSaveEntry} style={{ flex: 1, justifyContent: 'center' }}>
+                          {editingIndex !== null ? <Check size={18} /> : <PlusCircle size={18} />}
+                          <span style={{ marginLeft: '0.5rem' }}>{editingIndex !== null ? t.updateBtn : t.addBtn}</span>
+                        </button>
+                        <button className="btn-secondary btn-hover-effect" onClick={() => { setSelectedWeaponHash(null); setEditingIndex(null); }} style={{ flex: 1, justifyContent: 'center' }}>
+                          {t.cancelBtn}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-
-                {selectedWeapon.screenshot && (
-                  <div className="weapon-screenshot-container card glass-panel" style={{ padding: 0, overflow: 'hidden', height: '180px' }}>
-                    <img
-                      src={`https://www.bungie.net${selectedWeapon.screenshot}`}
-                      alt="Weapon Screenshot"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  </div>
-                )}
-
-                <PerkSelector
-                  weapon={selectedWeapon}
-                  items={items}
-                  plugSets={plugSets}
-                  socketCategories={socketCategories}
-                  selectedPerks={selectedPerks}
-                  onTogglePerk={handleTogglePerk}
-                  lang={lang}
-                />
-
-                <div className="card glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <h3 className="card-title">{t.saveGodRoll}</h3>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    {['GodPvE', 'GodPvP', 'PvE', 'PvP', 'Mouse', 'Controller'].map(tag => (
-                      <button
-                        key={tag}
-                        onClick={() => handleToggleTag(tag)}
-                        className={`tag-btn ${selectedTags.includes(tag) ? 'active' : ''}`}
-                      >
-                        {tag}
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                    <input
-                      type="text"
-                      className="input-primary"
-                      placeholder={t.entryNamePlaceholder}
-                      value={entryName}
-                      onChange={(e) => setEntryName(e.target.value)}
-                      style={{ fontSize: '0.85rem' }}
-                    />
-                    <input
-                      type="text"
-                      className="input-primary"
-                      placeholder={t.notesPlaceholder}
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      style={{ fontSize: '0.85rem' }}
-                    />
-                  </div>
-                  <textarea
-                    className="input-primary"
-                    placeholder={t.entryDescriptionPlaceholder}
-                    value={entryDescription}
-                    onChange={(e) => setEntryDescription(e.target.value)}
-                    style={{ fontSize: '0.85rem', minHeight: '60px', resize: 'vertical' }}
-                  />
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button className="btn-primary" onClick={handleSaveEntry} style={{ flex: 1, justifyContent: 'center' }}>
-                      {editingIndex !== null ? <><Check size={18} /> {t.updateBtn}</> : <><PlusCircle size={18} /> {t.addBtn}</>}
-                    </button>
-                    <button className="btn-secondary" onClick={() => { setSelectedWeaponHash(null); setEditingIndex(null); }} style={{ flex: 1, justifyContent: 'center' }}>
-                      {t.cancelBtn}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <IntroView t={t} />
+              )
+            })() : (
+              <IntroView t={t} lang={lang} />
             )}
           </section>
         </main>
+        <footer className="app-footer">
+          <div className="footer-left">
+            <span>© {new Date().getFullYear()} D2 Wishlist Generator</span>
+          </div>
+          <div className="footer-right">
+            Build ID: <span className="build-id">{__APP_COMMIT__}</span>
+          </div>
+        </footer>
       </div>
     </ErrorBoundary>
   );

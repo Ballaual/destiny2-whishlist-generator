@@ -18,11 +18,17 @@ export interface DestinyItemDefinition {
     hasIcon: boolean;
   };
   screenshot?: string;
+  flavorText?: string;
+  displaySource?: string;
+  defaultDamageTypeHash?: number;
   redacted?: boolean;
   itemCategoryHashes?: number[];
   inventory?: {
     tierType: number;
     maxStackSize: number;
+    isInstanceItem: boolean;
+    tierTypeName: string;
+    ammoType: number;
   };
   itemTypeDisplayName?: string;
   sockets?: {

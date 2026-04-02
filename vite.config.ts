@@ -5,4 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: './',
+  define: {
+    __APP_COMMIT__: JSON.stringify('439cc05')
+  }
 })
