@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Trash2, Copy, Download, Upload, FileText, Code, Smartphone, ChevronRight, Check, Table, Search, X, Filter, ListChecks } from 'lucide-react';
 import type { DestinyItemDefinition } from '../lib/manifest';
+import { parseImportFile, type WishlistImportResult } from '../lib/importUtils';
 
 export interface WishlistEntry {
   itemHash: number;
@@ -16,7 +17,7 @@ interface WishlistManagerProps {
   items: Record<string, DestinyItemDefinition>;
   lang: 'en' | 'de';
   onExport: (format: string) => void;
-  onImport: (entries: WishlistEntry[]) => void;
+  onImport: (data: WishlistImportResult) => void;
   onRemove: (index: number) => void;
   onCopy: (index: number) => void;
   onSelectEntry: (entry: WishlistEntry) => void;
@@ -97,21 +98,19 @@ export function WishlistManager({
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const content = e.target?.result as string;
-        const data = JSON.parse(content);
-        if (data.entries) {
-          onImport(data.entries);
-        } else if (Array.isArray(data)) {
-          onImport(data);
-        }
+        const result = await parseImportFile(content, file.name);
+        onImport(result);
       } catch (err) {
         console.error('Import failed:', err);
         alert(lang === 'de' ? 'Import fehlgeschlagen: Ungültiges Format.' : 'Import failed: Invalid format.');
       }
     };
     reader.readAsText(file);
+    // Reset input so the same file can be uploaded again
+    event.target.value = '';
   };
 
   const formats = [
@@ -368,7 +367,7 @@ export function WishlistManager({
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.5rem' }}>
           <label className="btn-secondary btn-hover-effect" style={{ cursor: 'pointer', fontSize: '0.85rem' }}>
             <Upload size={16} /> {labels.importBtn}
-            <input type="file" accept=".json,.txt" onChange={handleFileUpload} style={{ display: 'none' }} />
+            <input type="file" accept=".json,.txt,.csv" onChange={handleFileUpload} style={{ display: 'none' }} />
           </label>
           <button 
             className="btn-primary btn-hover-effect" 

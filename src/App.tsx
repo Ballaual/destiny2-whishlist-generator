@@ -535,7 +535,7 @@ function App() {
         mimeType = 'text/plain';
         fileName = `d2wlg_dim_${safeName}.txt`;
       } else if (format === 'csv') {
-        const header = 'Weapon,Hash,Perks,Tags,Notes,Name,Description\n';
+        const header = 'Weapon,Hash,Perks,PerkHashes,Tags,Notes,Name,Description\n';
         const rows = wishlistEntries.map(entry => {
           const weapon = items[(entry.itemHash >>> 0).toString()];
           const weaponName = weapon?.displayProperties?.name || "Unknown Weapon";
@@ -544,11 +544,12 @@ function App() {
             return p?.displayProperties?.name || h.toString();
           });
           const perksStr = perkNames.join(' | ');
+          const perkHashesStr = entry.perkHashes.join('|');
           const tagsStr = entry.tags?.join(' | ') || '';
           const notesStr = entry.notes?.replace(/"/g, '""') || '';
           const nameStr = entry.name?.replace(/"/g, '""') || '';
           const descStr = entry.description?.replace(/"/g, '""') || '';
-          return `"${weaponName}","${entry.itemHash}","${perksStr}","${tagsStr}","${notesStr}","${nameStr}","${descStr}"`;
+          return `"${weaponName}","${entry.itemHash}","${perksStr}","${perkHashesStr}","${tagsStr}","${notesStr}","${nameStr}","${descStr}"`;
         }).join('\n');
         content = header + rows;
         mimeType = 'text/csv';
@@ -569,10 +570,13 @@ function App() {
     }
   };
 
-  const handleImport = (entries: WishlistEntry[]) => {
+  const handleImport = (data: { entries: WishlistEntry[], name?: string, description?: string }) => {
+    if (data.name) setWishlistName(data.name);
+    if (data.description) setWishlistDescription(data.description);
+
     setWishlistEntries(prev => {
       const combined = [...prev];
-      for (const entry of entries) {
+      for (const entry of data.entries) {
         const exists = combined.some(e => e.itemHash === entry.itemHash && JSON.stringify(e.perkHashes.sort()) === JSON.stringify(entry.perkHashes.sort()));
         if (!exists) combined.push(entry);
       }
