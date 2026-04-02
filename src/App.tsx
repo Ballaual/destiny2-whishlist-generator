@@ -15,6 +15,7 @@ function App() {
 
   const [items, setItems] = useState<Record<string, DestinyItemDefinition>>({});
   const [plugSets, setPlugSets] = useState<Record<string, DestinyPlugSetDefinition>>({});
+  const [searchIndex, setSearchIndex] = useState<Record<number, { en: string; de: string }>>({});
 
   const [selectedWeapon, setSelectedWeapon] = useState<DestinyItemDefinition | null>(null);
   const [selectedPerks, setSelectedPerks] = useState<Set<number>>(new Set());
@@ -30,6 +31,7 @@ function App() {
         const data = await loadManifest((p) => setProgress(p));
         setItems(data.items);
         setPlugSets(data.plugSets);
+        setSearchIndex(data.searchIndex);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -190,7 +192,7 @@ function App() {
 
       <div className="grid-2">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <WeaponSearch items={items} onSelect={handleSelectWeapon} />
+          <WeaponSearch items={items} searchIndex={searchIndex} onSelect={handleSelectWeapon} />
           <WishlistManager 
             entries={wishlistEntries}
             items={items}

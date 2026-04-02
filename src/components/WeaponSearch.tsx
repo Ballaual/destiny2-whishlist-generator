@@ -4,10 +4,11 @@ import type { DestinyItemDefinition } from '../lib/manifest';
 
 interface WeaponSearchProps {
   items: Record<string, DestinyItemDefinition>;
+  searchIndex: Record<number, { en: string; de: string }>;
   onSelect: (item: DestinyItemDefinition) => void;
 }
 
-export function WeaponSearch({ items, onSelect }: WeaponSearchProps) {
+export function WeaponSearch({ items, searchIndex, onSelect }: WeaponSearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<DestinyItemDefinition[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -30,15 +31,21 @@ export function WeaponSearch({ items, onSelect }: WeaponSearchProps) {
       return;
     }
     
-    // Convert items object to array and filter for weapons (itemType === 3)
-    // To make it performant, we limit results
-    const matches = [];
+    const matches: DestinyItemDefinition[] = [];
     const lowerQuery = query.toLowerCase();
     
-    for (const hash in items) {
-      const item = items[hash];
-      if (item.itemType === 3 && item.displayProperties?.name) {
-        if (item.displayProperties.name.toLowerCase().includes(lowerQuery) || hash.toString() === query) {
+    // Search in index
+    for (const hashStr in searchIndex) {
+      const hash = parseInt(hashStr, 10);
+      const names = searchIndex[hash];
+      const item = items[hashStr];
+
+      if (item && item.itemType === 3) {
+        if (
+          names.en.toLowerCase().includes(lowerQuery) || 
+          names.de.toLowerCase().includes(lowerQuery) || 
+          hashStr === query
+        ) {
           matches.push(item);
           if (matches.length >= 25) break;
         }
@@ -46,7 +53,7 @@ export function WeaponSearch({ items, onSelect }: WeaponSearchProps) {
     }
     setResults(matches);
     setIsOpen(true);
-  }, [query, items]);
+  }, [query, items, searchIndex]);
 
   return (
     <div className="card glass-panel" style={{ position: 'relative' }} ref={wrapperRef}>
@@ -56,7 +63,7 @@ export function WeaponSearch({ items, onSelect }: WeaponSearchProps) {
       <input
         type="text"
         className="input-primary"
-        placeholder="Enter weapon name or ID (e.g., Fatebringer)"
+        placeholder="Name (DE/EN) or ID"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => { if (results.length > 0) setIsOpen(true) }}
@@ -64,27 +71,35 @@ export function WeaponSearch({ items, onSelect }: WeaponSearchProps) {
 
       {isOpen && results.length > 0 && (
         <div className="search-results glass-panel">
-          {results.map(item => (
-            <button 
-              key={item.hash} 
-              className="search-result-item" 
-              onClick={() => {
-                onSelect(item);
-                setIsOpen(false);
-                setQuery('');
-              }}
-            >
-              <img 
-                src={`https://www.bungie.net${item.displayProperties.icon}`} 
-                alt={item.displayProperties.name} 
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-              />
-              <div className="item-details">
-                <span className="item-name">{item.displayProperties.name}</span>
-                <span className="item-type">{item.displayProperties.description?.slice(0, 50)}... • {item.hash}</span>
-              </div>
-            </button>
-          ))}
+          {results.map(item => {
+            const names = searchIndex[item.hash];
+            return (
+              <button 
+                key={item.hash} 
+                className="search-result-item" 
+                onClick={() => {
+                  onSelect(item);
+                  setIsOpen(false);
+                  setQuery('');
+                }}
+              >
+                <img 
+                  src={`https://www.bungie.net${item.displayProperties.icon}`} 
+                  alt={item.displayProperties.name} 
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+                <div className="item-details">
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'baseline' }}>
+                    <span className="item-name">{names?.de || item.displayProperties.name}</span>
+                    {names?.en && names.en !== names.de && (
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>({names.en})</span>
+                    )}
+                  </div>
+                  <span className="item-type">{item.displayProperties.description?.slice(0, 50)}... • {item.hash}</span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
