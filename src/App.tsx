@@ -610,7 +610,7 @@ function App() {
               <ListChecks size={20} />
               <h2>{t.myWishlist} ({wishlistEntries.length})</h2>
             </div>
-            <div className="wishlist-sidebar-footer" style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div className="wishlist-manager-container" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <WishlistManager
                 entries={wishlistEntries}
                 items={items}
@@ -630,9 +630,11 @@ function App() {
                   exportBtn: lang === 'de' ? 'Exportieren' : 'Export'
                 }}
               />
+            </div>
+            <div style={{ marginTop: 'auto', paddingTop: '1rem' }}>
               <button
                 className="btn-secondary"
-                style={{ border: 'none', fontSize: '0.75rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                style={{ width: '100%', border: 'none', fontSize: '0.75rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}
                 onClick={handleHardReset}
               >
                 <RefreshCcw size={12} /> {t.hardReset}

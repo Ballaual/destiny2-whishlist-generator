@@ -84,7 +84,7 @@ export function WishlistManager({
   ];
 
   return (
-    <div className="wishlist-manager" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%', overflow: 'hidden' }}>
+    <div className="wishlist-manager" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       <div className="wishlist-filter-wrapper" style={{ position: 'relative' }}>
         <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
         <input 
@@ -105,7 +105,7 @@ export function WishlistManager({
         )}
       </div>
 
-      <div className="wishlist-items glass-panel" style={{ flex: 1, minHeight: '150px', overflowY: 'auto', padding: '0.75rem' }}>
+      <div className="wishlist-items glass-panel" style={{ flex: '0 1 auto', maxHeight: '280px', minHeight: '100px', overflowY: 'auto', padding: '0.75rem' }}>
         {filteredEntries.length === 0 ? (
           <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem', fontSize: '0.85rem' }}>
             {filterText ? (lang === 'de' ? 'Keine Ergebnisse.' : 'No results.') : (lang === 'de' ? 'Deine Wunschliste ist noch leer.' : 'Your wishlist is empty.')}
