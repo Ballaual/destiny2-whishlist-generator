@@ -57,7 +57,7 @@ export function WishlistManager({
   };
 
   const formats = [
-    { id: 'internal', name: 'Wishlist Generator', icon: <Code size={14} /> },
+    { id: 'internal', name: 'D2WLG', icon: <Code size={14} /> },
     { id: 'dim', name: 'DIM', icon: <FileText size={14} /> },
     { id: 'littlelight', name: 'Little Light', icon: <Smartphone size={14} /> },
     { id: 'csv', name: 'CSV', icon: <Table size={14} /> },
