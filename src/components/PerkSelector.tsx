@@ -93,7 +93,7 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
         catName.includes('PLUG') ||
         catName.includes('ORIGIN');
 
-      if ((isWhitelisted || hasPerkKeyword) && !isBlacklisted) {
+      if ((isWhitelisted || hasPerkKeyword) && !isBlacklisted && cat.socketIndices) {
           validSocketIndices.push(...cat.socketIndices);
       }
     });
