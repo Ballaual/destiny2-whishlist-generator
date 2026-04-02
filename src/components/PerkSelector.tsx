@@ -56,9 +56,10 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
         const name = item.displayProperties.name || '';
         
         // Final sanity filters
-        if (name === 'Empty Mod Socket' || name === 'Default Shader' || name === 'Kill Tracker' || name.includes('Ornament')) return false;
+        if (!name || name === 'Classified' || name === 'Empty Mod Socket' || name === 'Default Shader' || name === 'Kill Tracker' || name.includes('Ornament')) return false;
         if (item.itemCategoryHashes?.includes(41)) return false; // Shaders
         if (item.itemCategoryHashes?.includes(59)) return false; // Mods
+        if (item.redacted) return false;
         
         return true;
       });

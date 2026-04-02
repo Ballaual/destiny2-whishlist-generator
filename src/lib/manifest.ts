@@ -18,6 +18,7 @@ export interface DestinyItemDefinition {
     icon: string;
     hasIcon: boolean;
   };
+  redacted?: boolean;
   itemCategoryHashes?: number[];
   inventory?: {
     tierType: number;
