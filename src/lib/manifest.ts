@@ -23,8 +23,13 @@ export interface DestinyItemDefinition {
     tierType: number;
     maxStackSize: number;
   };
+  itemTypeDisplayName?: string;
   sockets?: {
     socketEntries: readonly DestinyItemSocketEntryDefinition[];
+    socketCategories: readonly {
+      socketCategoryHash: number;
+      socketIndices: readonly number[];
+    }[];
   };
 }
 
@@ -40,6 +45,13 @@ export interface DestinyItemSocketEntryDefinition {
 export interface DestinyPlugSetDefinition {
   hash: number;
   reusablePlugItems: readonly { plugItemHash: number }[];
+}
+
+export interface DestinySocketCategoryDefinition {
+  hash: number;
+  displayProperties: {
+    name: string;
+  };
 }
 
 // Map of hashes to names in different languages
@@ -97,12 +109,14 @@ export async function loadManifest(
 ): Promise<{ 
     items: Record<string, DestinyItemDefinition>, 
     plugSets: Record<string, DestinyPlugSetDefinition>,
+    socketCategories: Record<string, DestinySocketCategoryDefinition>,
     searchIndex: SearchIndex 
 }> {
   
   // Step 1: Check cache
   let items = await manifestCache.getItem<Record<string, DestinyItemDefinition>>('items');
   let plugSets = await manifestCache.getItem<Record<string, DestinyPlugSetDefinition>>('plugSets');
+  let socketCategories = await manifestCache.getItem<Record<string, DestinySocketCategoryDefinition>>('socketCategories');
   let searchIndex = await manifestCache.getItem<SearchIndex>('searchIndex');
   let cachedVersion = await manifestCache.getItem<string>('version');
 
@@ -113,13 +127,13 @@ export async function loadManifest(
   const pathsDe = manifestRoot.Response.jsonWorldComponentContentPaths.de;
 
   // Step 3: Compare versions or check if missing
-  if (!items || !plugSets || !searchIndex || cachedVersion !== currentVersion) {
+  if (!items || !plugSets || !socketCategories || !searchIndex || cachedVersion !== currentVersion) {
     await manifestCache.clear();
     await manifestCache.setItem('version', currentVersion);
 
-    // Using full definition (not Lite) for English to get sockets
     const itemsEnUrl = `${BUNGIE_ROOT}${pathsEn.DestinyInventoryItemDefinition}`;
     const plugSetsUrl = `${BUNGIE_ROOT}${pathsEn.DestinyPlugSetDefinition}`;
+    const socketCategoriesUrl = `${BUNGIE_ROOT}${pathsEn.DestinySocketCategoryDefinition}`;
     
     // Using Lite definition for German just for names
     const itemsDeUrl = `${BUNGIE_ROOT}${pathsDe.DestinyInventoryItemLiteDefinition}`;
@@ -127,19 +141,24 @@ export async function loadManifest(
     try {
       if(onProgress) onProgress(1); // Handshake ok
       
-      // Load English Full (the main database)
+      // Load English Full
       const newItemsEn = await fetchWithProgress(itemsEnUrl, (p) => {
-        if(onProgress) onProgress(1 + (p * 0.7)); // 70% of total
+        if(onProgress) onProgress(1 + (p * 0.6)); // 60% of total
       });
 
-      // Load German Lite (for names only)
+      // Load German Lite
       const newItemsDe = await fetchWithProgress(itemsDeUrl, (p) => {
-        if(onProgress) onProgress(71 + (p * 0.15)); // 15% of total
+        if(onProgress) onProgress(61 + (p * 0.15)); // 15% of total
       });
       
       // Load PlugSets
       const newPlugSets = await fetchWithProgress(plugSetsUrl, (p) => {
-        if(onProgress) onProgress(86 + (p * 0.1)); // 10% of total
+        if(onProgress) onProgress(76 + (p * 0.15)); // 15% of total
+      });
+
+      // Load SocketCategories
+      const newSocketCategories = await fetchWithProgress(socketCategoriesUrl, (p) => {
+        if(onProgress) onProgress(91 + (p * 0.09)); // 9% of total
       });
 
       // Build Search Index
@@ -157,14 +176,27 @@ export async function loadManifest(
 
       await manifestCache.setItem('items', newItemsEn);
       await manifestCache.setItem('plugSets', newPlugSets);
+      await manifestCache.setItem('socketCategories', newSocketCategories);
       await manifestCache.setItem('searchIndex', newSearchIndex);
 
       if(onProgress) onProgress(100);
-      return { items: newItemsEn, plugSets: newPlugSets, searchIndex: newSearchIndex };
+      return { 
+          items: newItemsEn, 
+          plugSets: newPlugSets, 
+          socketCategories: newSocketCategories,
+          searchIndex: newSearchIndex 
+      };
     } catch (e: any) {
       throw new Error(`Failed to load manifest from Bungie: ${e.message}`);
     }
   }
 
-  return { items, plugSets, searchIndex };
+  return { items, plugSets, socketCategories, searchIndex };
+}
+
+export async function getManifestData() {
+    const items = await manifestCache.getItem<Record<string, DestinyItemDefinition>>('items');
+    const plugSets = await manifestCache.getItem<Record<string, DestinyPlugSetDefinition>>('plugSets');
+    const socketCategories = await manifestCache.getItem<Record<string, DestinySocketCategoryDefinition>>('socketCategories');
+    return { items, plugSets, socketCategories };
 }

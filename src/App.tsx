@@ -15,6 +15,7 @@ function App() {
 
   const [items, setItems] = useState<Record<string, DestinyItemDefinition>>({});
   const [plugSets, setPlugSets] = useState<Record<string, DestinyPlugSetDefinition>>({});
+  const [socketCategories, setSocketCategories] = useState<Record<string, any>>({});
   const [searchIndex, setSearchIndex] = useState<Record<number, { en: string; de: string }>>({});
 
   const [selectedWeapon, setSelectedWeapon] = useState<DestinyItemDefinition | null>(null);
@@ -31,6 +32,7 @@ function App() {
         const data = await loadManifest((p) => setProgress(p));
         setItems(data.items);
         setPlugSets(data.plugSets);
+        setSocketCategories(data.socketCategories);
         setSearchIndex(data.searchIndex);
       } catch (err: any) {
         setError(err.message);
@@ -87,48 +89,64 @@ function App() {
   };
 
   const handleExport = (format: string) => {
+    if (wishlistEntries.length === 0) return;
+
     let content = '';
     let mimeType = 'application/json';
     let fileName = 'destiny2_wishlist.json';
 
-    if (format === 'internal') {
-      const internalData = {
-        source: 'Destiny 2 Wishlist Generator',
-        version: '1.0',
-        exportedAt: new Date().toISOString(),
-        entries: wishlistEntries
-      };
-      content = JSON.stringify(internalData, null, 2);
-    } else if (format === 'littlelight') {
-      const llData = wishlistEntries.map(entry => ({
-        itemHash: entry.itemHash,
-        recommendedPerks: entry.perkHashes
-      }));
-      content = JSON.stringify(llData, null, 2);
-    } else if (format === 'dim') {
-      const lines = [];
-      for (const entry of wishlistEntries) {
-        if (entry.notes) {
-          lines.push(`//notes:${entry.notes}`);
+    try {
+      if (format === 'internal') {
+        const internalData = {
+          source: 'Destiny 2 Wishlist Generator',
+          version: '1.0',
+          exportedAt: new Date().toISOString(),
+          entries: wishlistEntries
+        };
+        content = JSON.stringify(internalData, null, 2);
+      } else if (format === 'littlelight') {
+        const llData = wishlistEntries.map(entry => ({
+          itemHash: entry.itemHash,
+          recommendedPerks: entry.perkHashes
+        }));
+        content = JSON.stringify(llData, null, 2);
+      } else if (format === 'dim') {
+        const lines = [];
+        for (const entry of wishlistEntries) {
+          if (entry.notes) {
+            lines.push(`//notes:${entry.notes}`);
+          }
+          const itemPart = `item=${entry.itemHash}`;
+          const perksPart = entry.perkHashes.length > 0 ? `&perks=${entry.perkHashes.join(',')}` : '';
+          lines.push(`dimwishlist:${itemPart}${perksPart}`);
         }
-        const itemPart = `item=${entry.itemHash}`;
-        const perksPart = entry.perkHashes.length > 0 ? `&perks=${entry.perkHashes.join(',')}` : '';
-        lines.push(`dimwishlist:${itemPart}${perksPart}`);
+        content = lines.join('\n');
+        mimeType = 'text/plain';
+        fileName = 'destiny2_wishlist.txt';
       }
-      content = lines.join('\n');
-      mimeType = 'text/plain';
-      fileName = 'destiny2_wishlist.txt';
+
+      if (!content) {
+        console.error('Export failed: No content generated.');
+        return;
+      }
+      
+      const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
+    } catch (err) {
+      console.error('Export Error:', err);
+      alert('Der Export ist fehlgeschlagen. Bitte versuche es erneut.');
     }
-    
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   const handleImport = (entries: WishlistEntry[]) => {
@@ -210,6 +228,7 @@ function App() {
                 weapon={selectedWeapon}
                 items={items}
                 plugSets={plugSets}
+                socketCategories={socketCategories}
                 selectedPerks={selectedPerks}
                 onTogglePerk={handleTogglePerk}
               />

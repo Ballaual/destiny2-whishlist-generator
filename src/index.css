@@ -126,6 +126,30 @@ a {
   box-shadow: 0 0 15px rgba(234, 179, 8, 0.4);
 }
 
+.perk-item.perk-enhanced {
+  border-color: #eab308; /* Golden border for enhanced perks */
+}
+
+.perk-item.perk-enhanced.selected {
+  background-color: #eab308;
+  box-shadow: 0 0 15px rgba(234, 179, 8, 0.4);
+}
+
+.enhanced-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: rgba(0,0,0,0.8);
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #eab308;
+  z-index: 5;
+}
+
 .perk-item img {
   width: 48px;
   height: 48px;
