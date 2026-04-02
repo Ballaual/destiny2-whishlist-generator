@@ -10,24 +10,12 @@ interface PerkSelectorProps {
   onTogglePerk: (hash: number) => void;
 }
 
-// Language-independent category hashes for weapon perks
-const PERK_CATEGORY_HASHES = [
-  4241352761, // Weapon Perks (Standard)
-  4241085061, // WEAPON PERKS (Found by user)
-  3705191010, // Intrinsic (Weapon Archetype)
-  3956125808, // INTRINSIC TRAITS (Found by user)
-  2216078230, // Origin Trait
-  2611454766, // Additional Weapon Perks
-  1362267390, // Alternate Perks
-];
-
-// Explicitly ignore these
-const IGNORE_CATEGORY_HASHES = [
+// Explicitly ignore these - anything else will be shown if it contains plugs
+const BLACKLIST_CATEGORY_HASHES = [
   2048505904, // Modifications
-  2685412949, // WEAPON MODS (Found by user)
+  2685412949, // WEAPON MODS
   267439160,  // Cosmetics
-  2048875504, // WEAPON COSMETICS (Found by user)
-  3532890696, // Masterwork
+  2048875504, // WEAPON COSMETICS
   1053423714, // Trackers
 ];
 
@@ -56,15 +44,22 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
       plugHashes = entry.reusablePlugItems.map((p: any) => p.plugItemHash);
     }
     
-    return plugHashes
+    // Add initial item as fallback
+    if (plugHashes.length === 0 && entry.singleInitialItemHash) {
+      plugHashes = [entry.singleInitialItemHash];
+    }
+    
+    return Array.from(new Set(plugHashes)) // Deduplicate
       .map(hash => items[hash])
       .filter((item): item is DestinyItemDefinition => {
         if (!item || !item.displayProperties) return false;
         const name = item.displayProperties.name || '';
-        // Filter out obviously non-perk items
+        
+        // Final sanity filters
         if (name === 'Empty Mod Socket' || name === 'Default Shader' || name === 'Kill Tracker' || name.includes('Ornament')) return false;
-        // Hide shaders specifically
-        if (item.itemCategoryHashes?.includes(41)) return false;
+        if (item.itemCategoryHashes?.includes(41)) return false; // Shaders
+        if (item.itemCategoryHashes?.includes(59)) return false; // Mods
+        
         return true;
       });
   };
@@ -75,48 +70,32 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
       const catHash = cat.socketCategoryHash;
       if (!catHash) return;
       
-      const isWhitelisted = PERK_CATEGORY_HASHES.includes(catHash);
-      const isBlacklisted = IGNORE_CATEGORY_HASHES.includes(catHash);
-      
-      const catDef = socketCategories[catHash];
-      const catName = (catDef?.displayProperties?.name || '').toUpperCase();
-      
-      const hasPerkKeyword = 
-        catName.includes('PERK') || 
-        catName.includes('TRAIT') || 
-        catName.includes('EIGENSCHAFT') || 
-        catName.includes('MAGAZIN') || 
-        catName.includes('LAUF') || 
-        catName.includes('MUZZLE') || 
-        catName.includes('FRAME') || 
-        catName.includes('GEHÄUSE') || 
-        catName.includes('PLUG') ||
-        catName.includes('ORIGIN');
-
-      if ((isWhitelisted || hasPerkKeyword) && !isBlacklisted && cat.socketIndices) {
+      const isBlacklisted = BLACKLIST_CATEGORY_HASHES.includes(catHash);
+      if (!isBlacklisted && cat.socketIndices) {
           validSocketIndices.push(...cat.socketIndices);
       }
     });
   }
 
-  const perkColumns = validSocketIndices
+  // If no categories matched our blacklist, but we found nothing, let's try ALL sockets
+  let effectiveIndices = validSocketIndices.length > 0 ? validSocketIndices : weapon.sockets.socketEntries.map((_, i) => i);
+
+  const perkColumns = effectiveIndices
     .map(idx => ({ index: idx, plugs: getPlugsForSocket(weapon.sockets!.socketEntries[idx]) }))
     .filter(col => col.plugs.length > 0);
 
   if (perkColumns.length === 0) {
-    const availableCats = weapon.sockets.socketCategories?.map(c => {
+    const debugInfo = weapon.sockets.socketCategories?.map(c => {
         const def = socketCategories[c.socketCategoryHash];
         return `${def?.displayProperties?.name || 'Unknown'} (${c.socketCategoryHash})`;
-    }).join(', ') || 'None';
+    }).join(' | ') || 'None';
 
     return (
       <div className="card glass-panel">
         <p>No perk variations available for this weapon.</p>
-        {availableCats !== 'None' && (
-          <p style={{ fontSize: '0.75rem', marginTop: '1rem', color: 'var(--text-secondary)' }}>
-            Found categories: {availableCats}
-          </p>
-        )}
+        <p style={{ fontSize: '0.7rem', marginTop: '1rem', color: 'var(--text-secondary)' }}>
+          Debug: {debugInfo}
+        </p>
       </div>
     );
   }
@@ -124,7 +103,7 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
   return (
     <div className="card glass-panel">
       <h2 className="card-title">
-        <Crosshair size={24} /> {weapon.displayProperties.name}
+        <Crosshair size={24} /> {weapon.displayProperties?.name || 'Weapon Perks'}
       </h2>
       <div className="perk-grid">
         {perkColumns.map((col, colIdx) => (
@@ -134,7 +113,7 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
               
               const isSelected = selectedPerks.has(perk.hash);
               const isEnhanced = isEnhancedPerk(perk);
-              const perkName = perk.displayProperties?.name || '';
+              const perkName = perk.displayProperties?.name || 'Unknown Perk';
               const isMw = perkName.toLowerCase().includes('masterwork') || perk.itemType === 19;
               
               return (
