@@ -14,7 +14,6 @@ export function WeaponSearch({ items, searchIndex, onSelect }: WeaponSearchProps
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
@@ -34,7 +33,6 @@ export function WeaponSearch({ items, searchIndex, onSelect }: WeaponSearchProps
     const matches: DestinyItemDefinition[] = [];
     const lowerQuery = query.toLowerCase();
     
-    // Search in index
     for (const hashStr in searchIndex) {
       const hash = parseInt(hashStr, 10);
       const names = searchIndex[hash];
@@ -47,7 +45,7 @@ export function WeaponSearch({ items, searchIndex, onSelect }: WeaponSearchProps
           hashStr === query
         ) {
           matches.push(item);
-          if (matches.length >= 25) break;
+          if (matches.length >= 15) break; // Smaller result set for header
         }
       }
     }
@@ -56,23 +54,27 @@ export function WeaponSearch({ items, searchIndex, onSelect }: WeaponSearchProps
   }, [query, items, searchIndex]);
 
   return (
-    <div className="card glass-panel" style={{ position: 'relative' }} ref={wrapperRef}>
-      <h2 className="card-title">
-        <Search size={24} /> Search Weapon
-      </h2>
-      <input
-        type="text"
-        className="input-primary"
-        placeholder="Name (DE/EN) or ID"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onFocus={() => { if (results.length > 0) setIsOpen(true) }}
-      />
+    <div className="search-container" style={{ position: 'relative' }} ref={wrapperRef}>
+      <div className="search-input-wrapper">
+        <Search size={18} className="search-icon" />
+        <input
+          type="text"
+          className="header-search-input"
+          placeholder="Suche Waffe (DE/EN)..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => { if (results.length > 0) setIsOpen(true) }}
+        />
+      </div>
 
       {isOpen && results.length > 0 && (
         <div className="search-results glass-panel">
           {results.map(item => {
+            if (!item || !item.displayProperties) return null;
             const names = searchIndex[item.hash];
+            const itemName = names?.de || item.displayProperties.name || 'Unknown';
+            const itemEn = names?.en;
+
             return (
               <button 
                 key={item.hash} 
@@ -85,17 +87,17 @@ export function WeaponSearch({ items, searchIndex, onSelect }: WeaponSearchProps
               >
                 <img 
                   src={`https://www.bungie.net${item.displayProperties.icon}`} 
-                  alt={item.displayProperties.name} 
+                  alt={itemName} 
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
                 <div className="item-details">
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'baseline' }}>
-                    <span className="item-name">{names?.de || item.displayProperties.name}</span>
-                    {names?.en && names.en !== names.de && (
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>({names.en})</span>
+                    <span className="item-name">{itemName}</span>
+                    {itemEn && itemEn !== itemName && (
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>({itemEn})</span>
                     )}
                   </div>
-                  <span className="item-type">{item.displayProperties.description?.slice(0, 50)}... • {item.hash}</span>
+                  <span className="item-type">{item.itemTypeDisplayName} • {item.hash}</span>
                 </div>
               </button>
             );

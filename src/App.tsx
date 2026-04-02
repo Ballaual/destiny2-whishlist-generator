@@ -4,6 +4,7 @@ import type { DestinyItemDefinition, DestinyPlugSetDefinition } from './lib/mani
 import { WeaponSearch } from './components/WeaponSearch';
 import { PerkSelector } from './components/PerkSelector';
 import { WishlistManager } from './components/WishlistManager';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import type { WishlistEntry } from './components/WishlistManager';
 import { PlusCircle, Database, Check, Layout, ListChecks } from 'lucide-react';
 import './index.css';
@@ -23,18 +24,20 @@ function App() {
   const [wishlistEntries, setWishlistEntries] = useState<WishlistEntry[]>([]);
   const [notes, setNotes] = useState('');
 
-  // Editing existing entry if selected
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   useEffect(() => {
     async function init() {
       try {
         const data = await loadManifest((p) => setProgress(p));
-        setItems(data.items);
-        setPlugSets(data.plugSets);
-        setSocketCategories(data.socketCategories);
-        setSearchIndex(data.searchIndex);
+        if (data) {
+          setItems(data.items || {});
+          setPlugSets(data.plugSets || {});
+          setSocketCategories(data.socketCategories || {});
+          setSearchIndex(data.searchIndex || {});
+        }
       } catch (err: any) {
+        console.error("Manifest Load Error:", err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -56,6 +59,7 @@ function App() {
   };
 
   const handleSelectWeapon = (weapon: DestinyItemDefinition) => {
+    console.log("Weapon Selected:", weapon.displayProperties?.name, weapon.hash);
     setSelectedWeapon(weapon);
     setSelectedPerks(new Set());
     setNotes('');
@@ -82,7 +86,6 @@ function App() {
       }]);
     }
     
-    // Clear selection after save
     setSelectedWeapon(null);
     setSelectedPerks(new Set());
     setNotes('');
@@ -141,7 +144,6 @@ function App() {
       }, 100);
     } catch (err) {
       console.error('Export Error:', err);
-      alert('Der Export ist fehlgeschlagen.');
     }
   };
 
@@ -170,13 +172,10 @@ function App() {
     return (
       <div className="loading-overlay">
         <div className="spinner"></div>
-        <h2 style={{ color: 'var(--text-primary)' }}>Connecting to Bungie & Fetching Manifest...</h2>
+        <h2 style={{ color: 'var(--text-primary)' }}>Loading Manifest...</h2>
         <div className="progress-bar-container">
           <div className="progress-bar-fill" style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}></div>
         </div>
-        <p style={{ marginTop: '0.5rem', color: 'var(--text-secondary)' }}>
-          Step 1: Finding latest data paths... {progress > 0 ? '(Downloading)' : ''}
-        </p>
       </div>
     );
   }
@@ -194,83 +193,83 @@ function App() {
   }
 
   return (
-    <div className="container">
-      <header className="app-header">
-        <div className="header-top">
-          <div>
-            <h1 className="app-title">Wishlist Generator</h1>
-            <p className="app-subtitle">Destiny 2 God-Roll Creator</p>
+    <ErrorBoundary>
+      <div className="container">
+        <header className="app-header">
+          <div className="header-top">
+            <div>
+              <h1 className="app-title">Wishlist Generator</h1>
+              <p className="app-subtitle">Destiny 2 God-Roll Creator</p>
+            </div>
+            <div className="header-search">
+              <WeaponSearch items={items} searchIndex={searchIndex} onSelect={handleSelectWeapon} />
+            </div>
           </div>
-          <div className="header-search">
-             <WeaponSearch items={items} searchIndex={searchIndex} onSelect={handleSelectWeapon} />
-          </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="main-layout">
-        {/* LEFT COLUMN: MANAGER */}
-        <section className="column-left">
-          <div className="section-header">
-            <ListChecks size={20} />
-            <h2>My Wishlist</h2>
-          </div>
-          <WishlistManager 
-            entries={wishlistEntries}
-            items={items}
-            onExport={handleExport}
-            onImport={handleImport}
-            onRemove={(index) => setWishlistEntries(prev => prev.filter((_, i) => i !== index))}
-            onSelectEntry={handleSelectEntry}
-          />
-        </section>
+        <main className="main-layout">
+          <section className="column-left">
+            <div className="section-header">
+              <ListChecks size={20} />
+              <h2>My Wishlist ({wishlistEntries.length})</h2>
+            </div>
+            <WishlistManager 
+              entries={wishlistEntries}
+              items={items}
+              onExport={handleExport}
+              onImport={handleImport}
+              onRemove={(index) => setWishlistEntries(prev => prev.filter((_, i) => i !== index))}
+              onSelectEntry={handleSelectEntry}
+            />
+          </section>
 
-        {/* RIGHT COLUMN: PERKS & SAVE */}
-        <section className="column-right">
-          {selectedWeapon ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <div className="section-header">
-                <Layout size={20} />
-                <h2>Perk Configuration</h2>
-              </div>
-              
-              <PerkSelector 
-                weapon={selectedWeapon}
-                items={items}
-                plugSets={plugSets}
-                socketCategories={socketCategories}
-                selectedPerks={selectedPerks}
-                onTogglePerk={handleTogglePerk}
-              />
-              
-              <div className="card glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <h3 className="card-title">Save God-Roll</h3>
-                <input 
-                  type="text" 
-                  className="input-primary" 
-                  placeholder="Notes (e.g. PvP, Raid, etc.)" 
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
+          <section className="column-right">
+            {selectedWeapon ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div className="section-header">
+                  <Layout size={20} />
+                  <h2>Perk Configuration</h2>
+                </div>
+                
+                <PerkSelector 
+                  weapon={selectedWeapon}
+                  items={items}
+                  plugSets={plugSets}
+                  socketCategories={socketCategories}
+                  selectedPerks={selectedPerks}
+                  onTogglePerk={handleTogglePerk}
                 />
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                  <button className="btn-primary" onClick={handleSaveEntry} style={{ flex: 1, justifyContent: 'center' }}>
-                    {editingIndex !== null ? <><Check size={18} /> Update Entry</> : <><PlusCircle size={18} /> Add to List</>}
-                  </button>
-                  <button className="btn-secondary" onClick={() => { setSelectedWeapon(null); setEditingIndex(null); }} style={{ flex: 1, justifyContent: 'center' }}>
-                    Cancel
-                  </button>
+                
+                <div className="card glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <h3 className="card-title">Save God-Roll</h3>
+                  <input 
+                    type="text" 
+                    className="input-primary" 
+                    placeholder="Notes (e.g. PvP, Raid, etc.)" 
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                  />
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <button className="btn-primary" onClick={handleSaveEntry} style={{ flex: 1, justifyContent: 'center' }}>
+                      {editingIndex !== null ? <><Check size={18} /> Update</> : <><PlusCircle size={18} /> Add</>}
+                    </button>
+                    <button className="btn-secondary" onClick={() => { setSelectedWeapon(null); setEditingIndex(null); }} style={{ flex: 1, justifyContent: 'center' }}>
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="card glass-panel empty-state">
-              <Database size={48} style={{ marginBottom: '1rem' }} />
-              <h3>Choose a weapon</h3>
-              <p>Search in the header to start building your wishlist entries.</p>
-            </div>
-          )}
-        </section>
-      </main>
-    </div>
+            ) : (
+              <div className="card glass-panel empty-state">
+                <Database size={48} style={{ marginBottom: '1rem' }} />
+                <h3>Choose a weapon</h3>
+                <p>Search in the header to start building your wishlist entries.</p>
+              </div>
+            )}
+          </section>
+        </main>
+      </div>
+    </ErrorBoundary>
   );
 }
 
