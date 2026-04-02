@@ -144,6 +144,8 @@ function App() {
   const [notes, setNotes] = useState('');
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [wishlistName, setWishlistName] = useState('');
+  const [wishlistDescription, setWishlistDescription] = useState('');
 
   const t = TRANSLATIONS[lang];
 
@@ -254,17 +256,37 @@ function App() {
       if (format === 'internal') {
         content = JSON.stringify({ source: 'Destiny 2 Wishlist Generator', version: '1.0', exportedAt: new Date().toISOString(), entries: wishlistEntries }, null, 2);
       } else if (format === 'littlelight') {
-        content = JSON.stringify(wishlistEntries.map(entry => ({ itemHash: entry.itemHash, recommendedPerks: entry.perkHashes })), null, 2);
+        const littleLightData = {
+          name: wishlistName || 'My Wishlist',
+          description: wishlistDescription || 'Exported from Destiny 2 Wishlist Generator',
+          data: wishlistEntries.map(entry => {
+            const weapon = items[(entry.itemHash >>> 0).toString()];
+            return {
+              name: weapon?.displayProperties?.name || "",
+              description: entry.notes || "",
+              hash: entry.itemHash,
+              plugs: entry.perkHashes.map(h => [h]),
+              tags: ["GodPVE"]
+            };
+          })
+        };
+        content = JSON.stringify(littleLightData, null, 2);
       } else if (format === 'dim') {
-        content = wishlistEntries.map(entry => {
-          const notesPart = entry.notes ? `//notes:${entry.notes}\n` : '';
-          return `${notesPart}dimwishlist:item=${entry.itemHash}${entry.perkHashes.length > 0 ? `&perks=${entry.perkHashes.join(',')}` : ''}`;
-        }).join('\n');
+        const header = `title:${wishlistName || 'My Wishlist'}\ndescription:${wishlistDescription || 'Exported from Destiny 2 Wishlist Generator'}\n\n`;
+        const entries = wishlistEntries.map(entry => {
+          const weapon = items[(entry.itemHash >>> 0).toString()];
+          const weaponName = weapon?.displayProperties?.name || "Unknown Weapon";
+          const notes = entry.notes ? `tags:god-pve, ${entry.notes}` : "tags:god-pve";
+          
+          return `// ${weaponName} (god-pve)\n//notes: ${notes}\ndimwishlist:item=${entry.itemHash}${entry.perkHashes.length > 0 ? `&perks=${entry.perkHashes.join(',')}` : ''}`;
+        }).join('\n\n');
+        content = header + entries;
         mimeType = 'text/plain';
         fileName = 'destiny2_wishlist.txt';
       }
 
       if (!content) return;
+      console.log('Export Content:', content);
       const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -393,6 +415,10 @@ function App() {
                 onImport={handleImport}
                 onRemove={(index) => setWishlistEntries(prev => prev.filter((_, i) => i !== index))}
                 onSelectEntry={handleSelectEntry}
+                wishlistName={wishlistName}
+                onWishlistNameChange={setWishlistName}
+                wishlistDescription={wishlistDescription}
+                onWishlistDescriptionChange={setWishlistDescription}
                 labels={{
                   header: t.myWishlist,
                   importBtn: lang === 'de' ? 'Importieren' : 'Import JSON',

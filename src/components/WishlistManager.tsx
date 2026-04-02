@@ -16,6 +16,10 @@ interface WishlistManagerProps {
   onImport: (entries: WishlistEntry[]) => void;
   onRemove: (index: number) => void;
   onSelectEntry: (entry: WishlistEntry) => void;
+  wishlistName: string;
+  onWishlistNameChange: (val: string) => void;
+  wishlistDescription: string;
+  onWishlistDescriptionChange: (val: string) => void;
   labels: {
     header: string;
     importBtn: string;
@@ -23,7 +27,10 @@ interface WishlistManagerProps {
   };
 }
 
-export function WishlistManager({ entries, items, lang, onExport, onImport, onRemove, onSelectEntry, labels }: WishlistManagerProps) {
+export function WishlistManager({ 
+  entries, items, lang, onExport, onImport, onRemove, onSelectEntry, 
+  wishlistName, onWishlistNameChange, wishlistDescription, onWishlistDescriptionChange, labels 
+}: WishlistManagerProps) {
   const [exportFormat, setExportFormat] = useState('dim');
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,6 +112,27 @@ export function WishlistManager({ entries, items, lang, onExport, onImport, onRe
       </div>
 
       <div className="wishlist-actions card glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '0.5rem' }}>
+          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            {lang === 'de' ? 'Wishlist Details' : 'Wishlist Details'}
+          </div>
+          <input 
+            type="text" 
+            className="input-primary" 
+            placeholder={lang === 'de' ? 'Name der Wunschliste' : 'Wishlist Name'}
+            value={wishlistName}
+            onChange={(e) => onWishlistNameChange(e.target.value)}
+            style={{ fontSize: '0.85rem', padding: '0.6rem 0.8rem' }}
+          />
+          <textarea 
+            className="input-primary" 
+            placeholder={lang === 'de' ? 'Beschreibung' : 'Description'}
+            value={wishlistDescription}
+            onChange={(e) => onWishlistDescriptionChange(e.target.value)}
+            style={{ fontSize: '0.85rem', padding: '0.6rem 0.8rem', minHeight: '60px', resize: 'vertical', fontFamily: 'inherit' }}
+          />
+        </div>
+
         <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
            {lang === 'de' ? 'Format wählen' : 'Choose Format'}
         </div>
