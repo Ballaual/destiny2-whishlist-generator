@@ -121,7 +121,16 @@ export async function loadManifest(
   let cachedVersion = await manifestCache.getItem<string>('version');
 
   // Step 2: Fetch current manifest version from Bungie
-  const manifestRoot = await (await fetch(MANIFEST_API)).json();
+  const rootResponse = await fetch(MANIFEST_API);
+  if (!rootResponse.ok) {
+     throw new Error(`Bungie Manifest API is currently unavailable (Status: ${rootResponse.status}). Please try again later.`);
+  }
+  
+  const manifestRoot = await rootResponse.json();
+  if (!manifestRoot || !manifestRoot.Response) {
+     throw new Error(`Bungie API returned an invalid response (ErrorCode: ${manifestRoot?.ErrorCode || 'Unknown'}). The API might be down for maintenance.`);
+  }
+
   const currentVersion = manifestRoot.Response.version;
   const pathsEn = manifestRoot.Response.jsonWorldComponentContentPaths.en;
   const pathsDe = manifestRoot.Response.jsonWorldComponentContentPaths.de;
