@@ -73,8 +73,8 @@ export function WeaponSearch({ items, searchIndex, onSelect, lang = 'en' }: Weap
           {results.map(item => {
             if (!item || !item.displayProperties) return null;
             const names = searchIndex[item.hash];
-            const itemName = names?.de || item.displayProperties.name || 'Unknown';
-            const itemEn = names?.en;
+            const primaryName = lang === 'de' ? (names?.de || names?.en) : (names?.en || names?.de);
+            const secondaryName = lang === 'de' ? names?.en : names?.de;
 
             return (
               <button 
@@ -88,14 +88,14 @@ export function WeaponSearch({ items, searchIndex, onSelect, lang = 'en' }: Weap
               >
                 <img 
                   src={`https://www.bungie.net${item.displayProperties.icon}`} 
-                  alt={itemName} 
+                  alt={primaryName} 
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
                 <div className="item-details">
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'baseline' }}>
-                    <span className="item-name">{itemName}</span>
-                    {itemEn && itemEn !== itemName && (
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>({itemEn})</span>
+                    <span className="item-name">{primaryName}</span>
+                    {secondaryName && secondaryName !== primaryName && (
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>({secondaryName})</span>
                     )}
                   </div>
                   <span className="item-type">{item.itemTypeDisplayName} • {item.hash}</span>

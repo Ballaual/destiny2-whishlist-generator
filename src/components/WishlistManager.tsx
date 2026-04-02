@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trash2, Download, Upload, FileText, Code, Smartphone, ChevronRight, Check } from 'lucide-react';
+import { Trash2, Download, Upload, FileText, Code, Smartphone, ChevronRight, Check, Table } from 'lucide-react';
 import type { DestinyItemDefinition } from '../lib/manifest';
 
 export interface WishlistEntry {
@@ -32,7 +32,7 @@ export function WishlistManager({
   entries, items, lang, onExport, onImport, onRemove, onSelectEntry, 
   wishlistName, onWishlistNameChange, wishlistDescription, onWishlistDescriptionChange, labels 
 }: WishlistManagerProps) {
-  const [exportFormat, setExportFormat] = useState('dim');
+  const [exportFormat, setExportFormat] = useState('internal');
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -57,9 +57,10 @@ export function WishlistManager({
   };
 
   const formats = [
+    { id: 'internal', name: 'Wishlist Generator', icon: <Code size={14} /> },
     { id: 'dim', name: 'DIM', icon: <FileText size={14} /> },
-    { id: 'internal', name: 'JSON', icon: <Code size={14} /> },
     { id: 'littlelight', name: 'Little Light', icon: <Smartphone size={14} /> },
+    { id: 'csv', name: 'CSV', icon: <Table size={14} /> },
   ];
 
   return (
@@ -122,7 +123,7 @@ export function WishlistManager({
       <div className="wishlist-actions card glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '0.5rem' }}>
           <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {lang === 'de' ? 'Wishlist Details' : 'Wishlist Details'}
+            {lang === 'de' ? 'Wunschlisten Details' : 'Wishlist Details'}
           </div>
           <input 
             type="text" 
@@ -156,7 +157,6 @@ export function WishlistManager({
                 padding: '0.5rem', 
                 border: exportFormat === f.id ? '1px solid var(--accent-color)' : '1px solid var(--panel-border)',
                 background: exportFormat === f.id ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255,255,255,0.02)',
-                gridColumn: f.id === 'littlelight' ? 'span 2' : 'span 1',
                 position: 'relative'
               }}
             >

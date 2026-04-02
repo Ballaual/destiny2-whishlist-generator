@@ -14,7 +14,6 @@ type Language = 'en' | 'de';
 const TRANSLATIONS = {
   en: {
     title: 'Wishlist Generator',
-    subtitle: 'Destiny 2 God-Roll Creator',
     loading: 'Loading Manifest...',
     errorTitle: 'Error Loading Manifest',
     retryBtn: 'Retry manually',
@@ -47,7 +46,6 @@ const TRANSLATIONS = {
   },
   de: {
     title: 'Wishlist Generator',
-    subtitle: 'Destiny 2 God-Roll Creator',
     loading: 'Lade Manifest...',
     errorTitle: 'Fehler beim Laden des Manifests',
     retryBtn: 'Manuell neu versuchen',
@@ -138,21 +136,70 @@ function App() {
   const [socketCategories, setSocketCategories] = useState<Record<string, any>>({});
   const [searchIndex, setSearchIndex] = useState<Record<number, { en: string; de: string }>>({});
 
-  const [selectedWeapon, setSelectedWeapon] = useState<DestinyItemDefinition | null>(null);
-  const [selectedPerks, setSelectedPerks] = useState<Set<number>>(new Set());
-  const [wishlistEntries, setWishlistEntries] = useState<WishlistEntry[]>([]);
-  const [notes, setNotes] = useState('');
+  const [selectedWeaponHash, setSelectedWeaponHash] = useState<number | null>(() => {
+    const saved = localStorage.getItem('d2_wishlist_selected_hash');
+    return saved ? parseInt(saved, 10) : null;
+  });
+  const selectedWeapon = selectedWeaponHash ? items[(selectedWeaponHash >>> 0).toString()] : null;
+
+  const [selectedPerks, setSelectedPerks] = useState<Set<number>>(() => {
+    const saved = localStorage.getItem('d2_wishlist_selected_perks');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+  const [wishlistEntries, setWishlistEntries] = useState<WishlistEntry[]>(() => {
+    const saved = localStorage.getItem('d2_wishlist_entries');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [notes, setNotes] = useState(() => {
+    return localStorage.getItem('d2_wishlist_notes') || '';
+  });
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [wishlistName, setWishlistName] = useState('');
-  const [wishlistDescription, setWishlistDescription] = useState('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [wishlistName, setWishlistName] = useState(() => {
+    return localStorage.getItem('d2_wishlist_name') || '';
+  });
+  const [wishlistDescription, setWishlistDescription] = useState(() => {
+    return localStorage.getItem('d2_wishlist_description') || '';
+  });
+  const [selectedTags, setSelectedTags] = useState<string[]>(() => {
+    const saved = localStorage.getItem('d2_wishlist_selected_tags');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   const t = TRANSLATIONS[lang];
 
   useEffect(() => {
     localStorage.setItem('d2_wishlist_lang', lang);
   }, [lang]);
+
+  useEffect(() => {
+    localStorage.setItem('d2_wishlist_entries', JSON.stringify(wishlistEntries));
+  }, [wishlistEntries]);
+
+  useEffect(() => {
+    localStorage.setItem('d2_wishlist_name', wishlistName);
+  }, [wishlistName]);
+
+  useEffect(() => {
+    localStorage.setItem('d2_wishlist_description', wishlistDescription);
+  }, [wishlistDescription]);
+
+  useEffect(() => {
+    if (selectedWeaponHash) localStorage.setItem('d2_wishlist_selected_hash', selectedWeaponHash.toString());
+    else localStorage.removeItem('d2_wishlist_selected_hash');
+  }, [selectedWeaponHash]);
+
+  useEffect(() => {
+    localStorage.setItem('d2_wishlist_selected_perks', JSON.stringify(Array.from(selectedPerks)));
+  }, [selectedPerks]);
+
+  useEffect(() => {
+    localStorage.setItem('d2_wishlist_notes', notes);
+  }, [notes]);
+
+  useEffect(() => {
+    localStorage.setItem('d2_wishlist_selected_tags', JSON.stringify(selectedTags));
+  }, [selectedTags]);
 
   useEffect(() => {
     if (error && error.includes('[RETRY]')) {
@@ -247,7 +294,7 @@ function App() {
   };
 
   const handleSelectWeapon = (weapon: DestinyItemDefinition) => {
-    setSelectedWeapon(weapon);
+    setSelectedWeaponHash(weapon.hash);
     setSelectedPerks(new Set());
     setNotes('');
     setEditingIndex(null);
@@ -275,7 +322,7 @@ function App() {
       }]);
     }
     
-    setSelectedWeapon(null);
+    setSelectedWeaponHash(null);
     setSelectedPerks(new Set());
     setSelectedTags([]);
     setNotes('');
@@ -321,6 +368,23 @@ function App() {
         content = header + entries;
         mimeType = 'text/plain';
         fileName = `destiny2_whishlist_dim_${safeName}.txt`;
+      } else if (format === 'csv') {
+        const header = 'Name,Hash,Perks,Tags,Notes\n';
+        const rows = wishlistEntries.map(entry => {
+          const weapon = items[(entry.itemHash >>> 0).toString()];
+          const weaponName = weapon?.displayProperties?.name || "Unknown Weapon";
+          const perkNames = entry.perkHashes.map(h => {
+             const p = items[(h >>> 0).toString()];
+             return p?.displayProperties?.name || h.toString();
+          });
+          const perksStr = perkNames.join(' | ');
+          const tagsStr = entry.tags?.join(' | ') || '';
+          const notesStr = entry.notes?.replace(/"/g, '""') || '';
+          return `"${weaponName}","${entry.itemHash}","${perksStr}","${tagsStr}","${notesStr}"`;
+        }).join('\n');
+        content = header + rows;
+        mimeType = 'text/csv';
+        fileName = `destiny2_whishlist_${safeName}.csv`;
       }
 
       if (!content) return;
@@ -349,14 +413,11 @@ function App() {
   };
 
   const handleSelectEntry = (entry: WishlistEntry) => {
-    const weapon = items[(entry.itemHash >>> 0).toString()];
-    if (weapon) {
-      setSelectedWeapon(weapon);
-      setSelectedPerks(new Set(entry.perkHashes));
-      setSelectedTags(entry.tags || []);
-      setNotes(entry.notes || '');
-      setEditingIndex(wishlistEntries.indexOf(entry));
-    }
+    setSelectedWeaponHash(entry.itemHash);
+    setSelectedPerks(new Set(entry.perkHashes));
+    setSelectedTags(entry.tags || []);
+    setNotes(entry.notes || '');
+    setEditingIndex(wishlistEntries.indexOf(entry));
   };
 
   if (loading) {
@@ -412,7 +473,6 @@ function App() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flex: 1 }}>
               <div>
                 <h1 className="app-title">{t.title}</h1>
-                <p className="app-subtitle">{t.subtitle}</p>
               </div>
               <div className="header-search">
                 <WeaponSearch items={items} searchIndex={searchIndex} onSelect={handleSelectWeapon} lang={lang} />
@@ -525,7 +585,7 @@ function App() {
                     <button className="btn-primary" onClick={handleSaveEntry} style={{ flex: 1, justifyContent: 'center' }}>
                       {editingIndex !== null ? <><Check size={18} /> {t.updateBtn}</> : <><PlusCircle size={18} /> {t.addBtn}</>}
                     </button>
-                    <button className="btn-secondary" onClick={() => { setSelectedWeapon(null); setEditingIndex(null); }} style={{ flex: 1, justifyContent: 'center' }}>
+                    <button className="btn-secondary" onClick={() => { setSelectedWeaponHash(null); setEditingIndex(null); }} style={{ flex: 1, justifyContent: 'center' }}>
                       {t.cancelBtn}
                     </button>
                   </div>
