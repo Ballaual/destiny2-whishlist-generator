@@ -1,26 +1,15 @@
 import localforage from 'localforage';
 
-const MANIFEST_URLS = {
-  items: 'https://cdn.jsdelivr.net/npm/@d2api/manifest-data@latest/json/DestinyInventoryItemLiteDefinition.json',
-  plugSets: 'https://cdn.jsdelivr.net/npm/@d2api/manifest-data@latest/json/DestinyPlugSetDefinition.json'
-};
+const BUNGIE_ROOT = 'https://www.bungie.net';
+const MANIFEST_API = `${BUNGIE_ROOT}/Platform/Destiny2/Manifest/`;
 
 export const manifestCache = localforage.createInstance({
   name: 'Destiny2Manifest'
 });
 
-export type ManifestState = {
-  loading: boolean;
-  progress: number;
-  error: string | null;
-  itemsReady: boolean;
-  plugSetsReady: boolean;
-};
-
-// Extremely basic typing for the parts of the Bungie Manifest we care about
 export interface DestinyItemDefinition {
   hash: number;
-  itemType: number; // 3 means Weapon
+  itemType: number; 
   itemSubType: number;
   classType: number;
   displayProperties: {
@@ -55,9 +44,9 @@ export interface DestinyPlugSetDefinition {
 
 export async function fetchWithProgress(url: string, onProgress?: (progress: number) => void): Promise<any> {
     try {
-        const response = await fetch(url, { mode: 'cors', cache: 'no-cache' });
+        const response = await fetch(url, { mode: 'cors' });
         if (!response.ok) {
-            throw new Error(`Bungie API is responding with error ${response.status}: ${response.statusText}`);
+            throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
         }
         
         const contentLength = response.headers.get('content-length');
@@ -94,7 +83,7 @@ export async function fetchWithProgress(url: string, onProgress?: (progress: num
         return JSON.parse(text);
     } catch (err: any) {
         if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
-            throw new Error(`Network Error: Der Browser blockiert den Manifest-Download (CORS/Adblocker?) oder die Verbindung ist instabil. Bitte versuche die Seite neu zu laden.`);
+            throw new Error(`Connection Error: Make sure your browser has access to ${url}.`);
         }
         throw err;
     }
@@ -104,42 +93,44 @@ export async function loadManifest(
   onProgress?: (progress: number) => void
 ): Promise<{ items: Record<string, DestinyItemDefinition>, plugSets: Record<string, DestinyPlugSetDefinition> }> {
   
+  // Step 1: Check cache
   let items = await manifestCache.getItem<Record<string, DestinyItemDefinition>>('items');
   let plugSets = await manifestCache.getItem<Record<string, DestinyPlugSetDefinition>>('plugSets');
+  let cachedVersion = await manifestCache.getItem<string>('version');
 
-  if (!items || !plugSets) {
-    // Clear old cache if it exists securely before re-downloading
+  // Step 2: Fetch current manifest version from Bungie
+  const manifestRoot = await (await fetch(MANIFEST_API)).json();
+  const currentVersion = manifestRoot.Response.version;
+  const paths = manifestRoot.Response.jsonWorldComponentContentPaths.en;
+
+  // Step 3: Compare versions or check if missing
+  if (!items || !plugSets || cachedVersion !== currentVersion) {
     await manifestCache.clear();
+    await manifestCache.setItem('version', currentVersion);
 
-    const fetchItems = async () => {
-      const data = await fetchWithProgress(MANIFEST_URLS.items, (p) => {
-        if(onProgress) onProgress(p * 0.7); // Let items be 70% of total progress for UI
-      });
-      await manifestCache.setItem('items', data);
-      return data;
-    };
-
-    const fetchPlugSets = async () => {
-      const data = await fetchWithProgress(MANIFEST_URLS.plugSets, (p) => {
-        if(onProgress) onProgress(70 + (p * 0.3)); // Plug sets are remaining 30%
-      });
-      await manifestCache.setItem('plugSets', data);
-      return data;
-    };
+    const itemsUrl = `${BUNGIE_ROOT}${paths.DestinyInventoryItemLiteDefinition}`;
+    const plugSetsUrl = `${BUNGIE_ROOT}${paths.DestinyPlugSetDefinition}`;
 
     try {
-      // Execute sequentially to avoid memory spikes with large JSON blobs
-      if (!items) items = await fetchItems();
-      if (!plugSets) plugSets = await fetchPlugSets();
+      if(onProgress) onProgress(5); // Started
+      
+      const newItems = await fetchWithProgress(itemsUrl, (p) => {
+        if(onProgress) onProgress(5 + (p * 0.7)); 
+      });
+      await manifestCache.setItem('items', newItems);
+      
+      const newPlugSets = await fetchWithProgress(plugSetsUrl, (p) => {
+        if(onProgress) onProgress(75 + (p * 0.25)); 
+      });
+      await manifestCache.setItem('plugSets', newPlugSets);
+
+      return { items: newItems, plugSets: newPlugSets };
     } catch (e: any) {
-      throw new Error(`Failed to load manifest: ${e.message}`);
+      throw new Error(`Failed to load manifest from Bungie: ${e.message}`);
     }
-  } else {
-    // If loaded from cache, just set progress to 100
-    if (onProgress) onProgress(100);
   }
 
-  return { items: items as Record<string, unknown> as Record<string, DestinyItemDefinition>, plugSets: plugSets as Record<string, unknown> as Record<string, DestinyPlugSetDefinition> };
+  return { items, plugSets };
 }
 
 export async function getManifestData() {

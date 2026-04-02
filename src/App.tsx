@@ -155,12 +155,15 @@ function App() {
     return (
       <div className="loading-overlay">
         <div className="spinner"></div>
-        <h2 style={{ color: 'var(--text-primary)' }}>Loading Destiny 2 Manifest...</h2>
+        <h2 style={{ color: 'var(--text-primary)' }}>Connecting to Bungie & Fetching Manifest...</h2>
         <div className="progress-bar-container">
           <div className="progress-bar-fill" style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}></div>
         </div>
         <p style={{ marginTop: '0.5rem', color: 'var(--text-secondary)' }}>
-          This requires downloading ~20MB of item definitions. It will be cached for next time!
+          Step 1: Finding latest data paths... {progress > 0 ? '(Downloading)' : ''}
+        </p>
+        <p style={{ marginTop: '0.2rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+          This requires downloading ~20MB of item definitions. Caching will make next loads instant.
         </p>
       </div>
     );
