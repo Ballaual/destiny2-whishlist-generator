@@ -105,7 +105,7 @@ export async function fetchWithProgress(url: string, onProgress?: (progress: num
     }
 }
 
-const SCHEMA_VERSION = 'v2';
+const SCHEMA_VERSION = 'v3';
 
 export async function loadManifest(
   lang: 'en' | 'de' = 'en',
@@ -196,32 +196,42 @@ export async function loadManifest(
         if(onProgress) onProgress(91 + (p * 0.09)); // 9%
       });
 
-      // Build normalized dictionaries and search index
+      // Build robust dictionaries with double-hash mapping
       const normalizedItems: Record<string, DestinyItemDefinition> = {};
       const normalizedPlugSets: Record<string, DestinyPlugSetDefinition> = {};
       const normalizedSocketCategories: Record<string, DestinySocketCategoryDefinition> = {};
       const newSearchIndex: SearchIndex = {};
 
-      for (const hash in newItemsMain) {
-          const unsignedHash = (parseInt(hash, 10) >>> 0).toString();
-          const itemMain = newItemsMain[hash];
-          const itemSecondary = newItemsSecondary[hash];
+      for (const rawHash in newItemsMain) {
+          const itemMain = newItemsMain[rawHash];
+          const itemSecondary = newItemsSecondary[rawHash];
+          const unsignedHash = (parseInt(rawHash, 10) >>> 0).toString();
+          
+          // Double-map items
+          normalizedItems[rawHash] = itemMain;
           normalizedItems[unsignedHash] = itemMain;
 
           if (itemMain.displayProperties?.name) {
-              newSearchIndex[parseInt(unsignedHash, 10)] = {
+              const hashNum = parseInt(unsignedHash, 10);
+              newSearchIndex[hashNum] = {
                   en: lang === 'en' ? itemMain.displayProperties.name : (itemSecondary?.displayProperties?.name || itemMain.displayProperties.name),
                   de: lang === 'de' ? itemMain.displayProperties.name : (itemSecondary?.displayProperties?.name || itemMain.displayProperties.name)
               };
           }
       }
 
-      for (const hash in newPlugSets) {
-          normalizedPlugSets[(parseInt(hash, 10) >>> 0).toString()] = newPlugSets[hash];
+      for (const rawHash in newPlugSets) {
+          const plugSet = newPlugSets[rawHash];
+          const unsignedHash = (parseInt(rawHash, 10) >>> 0).toString();
+          normalizedPlugSets[rawHash] = plugSet;
+          normalizedPlugSets[unsignedHash] = plugSet;
       }
 
-      for (const hash in newSocketCategories) {
-          normalizedSocketCategories[(parseInt(hash, 10) >>> 0).toString()] = newSocketCategories[hash];
+      for (const rawHash in newSocketCategories) {
+          const socketCat = newSocketCategories[rawHash];
+          const unsignedHash = (parseInt(rawHash, 10) >>> 0).toString();
+          normalizedSocketCategories[rawHash] = socketCat;
+          normalizedSocketCategories[unsignedHash] = socketCat;
       }
 
       await manifestCache.setItem('items', normalizedItems);

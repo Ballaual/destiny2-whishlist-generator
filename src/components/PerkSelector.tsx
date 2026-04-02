@@ -38,14 +38,32 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
     
     let plugHashes: number[] = [];
     
+    const getSet = (hash: any) => {
+      if (!hash) return null;
+      const sHash = hash.toString();
+      const uHash = (hash >>> 0).toString();
+      const set = plugSets[uHash] || plugSets[sHash] || plugSets[hash as any];
+      if (!set && hash > 0) {
+        console.warn(`[Wishlist Refresh] PlugSet ${hash} not found in manifest.`);
+      }
+      return set;
+    };
+
+    const getItem = (hash: any) => {
+      if (!hash) return null;
+      const sHash = hash.toString();
+      const uHash = (hash >>> 0).toString();
+      return items[uHash] || items[sHash] || items[hash as any];
+    }
+
     // Combine all potential sources
     if (entry.randomizedPlugSetHash) {
-      const set = plugSets[(entry.randomizedPlugSetHash >>> 0).toString()];
+      const set = getSet(entry.randomizedPlugSetHash);
       if (set?.reusablePlugItems) plugHashes.push(...set.reusablePlugItems.map(p => p.plugItemHash));
     }
     
     if (entry.reusablePlugSetHash) {
-      const set = plugSets[(entry.reusablePlugSetHash >>> 0).toString()];
+      const set = getSet(entry.reusablePlugSetHash);
       if (set?.reusablePlugItems) plugHashes.push(...set.reusablePlugItems.map(p => p.plugItemHash));
     }
     
@@ -58,7 +76,7 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
     }
     
     return Array.from(new Set(plugHashes))
-      .map(hash => items[(hash >>> 0).toString()])
+      .map(hash => getItem(hash))
       .filter((item): item is DestinyItemDefinition => {
         if (!item || !item.displayProperties) return false;
         const name = item.displayProperties.name || '';

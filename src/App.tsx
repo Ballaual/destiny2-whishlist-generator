@@ -6,7 +6,7 @@ import { PerkSelector } from './components/PerkSelector';
 import { WishlistManager } from './components/WishlistManager';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import type { WishlistEntry } from './components/WishlistManager';
-import { PlusCircle, Database, Check, Layout, ListChecks, Info } from 'lucide-react';
+import { PlusCircle, Check, Layout, ListChecks, Info, Search, MousePointer2, Save, FileOutput, RefreshCcw } from 'lucide-react';
 import './index.css';
 
 type Language = 'en' | 'de';
@@ -24,15 +24,26 @@ const TRANSLATIONS = {
     perkConfig: 'Perk Configuration',
     saveGodRoll: 'Save God-Roll',
     notesPlaceholder: 'Notes (e.g. PvP, Raid, etc.)',
-    addBtn: 'Add',
-    updateBtn: 'Update',
+    addBtn: 'Add to Wishlist',
+    updateBtn: 'Update Entry',
     cancelBtn: 'Cancel',
     noWeaponSelected: 'Choose a weapon',
-    searchInstructions: 'Search in the header to start building your wishlist entries.',
     langEn: 'English',
     langDe: 'Deutsch',
     langEnDesc: 'Standard metadata. Best for using the exported rolls in external apps like DIM or Little Light.',
-    langDeDesc: 'Vollständig lokalisierte Daten. Ideal, um Perk-Effekte und Beschreibungen in deiner Muttersprache zu lesen.'
+    langDeDesc: 'Fully localized data. Ideal for reading perk effects and descriptions in your native language.',
+    welcomeTitle: 'Welcome to the Wishlist Generator',
+    welcomeSubtitle: 'The most powerful way to craft and export your Destiny 2 God-Roll wishlists.',
+    step1Title: '1. Search for Weapons',
+    step1Desc: 'Use the search bar in the header to find any weapon in the Destiny 2 database. We support both English and German names.',
+    step2Title: '2. Select your Perks',
+    step2Desc: 'Click on the perks you want for your God-Roll. You can select multiple perks per column to define your perfect roll.',
+    step3Title: '3. Save to Wishlist',
+    step3Desc: 'Add your selected combination to your personal wishlist on the left. You can add multiple rolls for the same weapon.',
+    step4Title: '4. Export & Sync',
+    step4Desc: 'Export your wishlist as a DIM-compatible text file or JSON for Little Light. Keep your rolls synced across all your apps.',
+    hardReset: 'Reset App Data',
+    hardResetConfirm: 'This will clear all cached manifest data and reload the app. Your wishlist will be preserved. Continue?'
   },
   de: {
     title: 'Wishlist Generator',
@@ -50,13 +61,58 @@ const TRANSLATIONS = {
     updateBtn: 'Aktualisieren',
     cancelBtn: 'Abbrechen',
     noWeaponSelected: 'Wähle eine Waffe',
-    searchInstructions: 'Nutze die Suche im Header, um deine Wunschliste zu bearbeiten.',
     langEn: 'English',
     langDe: 'Deutsch',
     langEnDesc: 'Standard-Metadaten. Am besten geeignet für den Export in Apps wie DIM oder Little Light.',
-    langDeDesc: 'Vollständig lokalisierte Daten. Ideal, um Perk-Effekte und Beschreibungen auf Deutsch zu lesen.'
+    langDeDesc: 'Vollständig lokalisierte Daten. Ideal, um Perk-Effekte und Beschreibungen auf Deutsch zu lesen.',
+    welcomeTitle: 'Willkommen beim Wishlist Generator',
+    welcomeSubtitle: 'Der einfachste Weg, um deine Destiny 2 God-Roll-Wunschlisten zu erstellen und zu exportieren.',
+    step1Title: '1. Waffe suchen',
+    step1Desc: 'Nutze die Suche im Header, um eine Waffe zu finden. Wir unterstützen deutsche und englische Namen gleichermaßen.',
+    step2Title: '2. Perks wählen',
+    step2Desc: 'Klicke auf die Perks, die dein God-Roll haben soll. Du kannst pro Spalte mehrere Perks auswählen.',
+    step3Title: '3. Speichern',
+    step3Desc: 'Füge deine Kombination zu deiner Wunschliste auf der linken Seite hinzu. Du kannst mehrere Rolls pro Waffe speichern.',
+    step4Title: '4. Exportieren',
+    step4Desc: 'Exportiere deine Liste als DIM-Textdatei oder JSON für Little Light. Nutze deine God-Rolls in all deinen Lieblings-Apps.',
+    hardReset: 'App-Daten zurücksetzen',
+    hardResetConfirm: 'Dies löscht alle gepufferten Manifest-Daten und lädt die App neu. Deine Wunschliste bleibt erhalten. Fortfahren?'
   }
 };
+
+function IntroView({ t }: { t: any }) {
+  return (
+    <div className="welcome-container">
+      <div className="welcome-hero">
+        <h2>{t.welcomeTitle}</h2>
+        <p>{t.welcomeSubtitle}</p>
+      </div>
+      
+      <div className="welcome-grid">
+        <div className="card glass-panel welcome-card">
+          <div className="welcome-card-icon"><Search size={24} /></div>
+          <h3>{t.step1Title}</h3>
+          <p>{t.step1Desc}</p>
+        </div>
+        <div className="card glass-panel welcome-card">
+          <div className="welcome-card-icon"><MousePointer2 size={24} /></div>
+          <h3>{t.step2Title}</h3>
+          <p>{t.step2Desc}</p>
+        </div>
+        <div className="card glass-panel welcome-card">
+          <div className="welcome-card-icon"><Save size={24} /></div>
+          <h3>{t.step3Title}</h3>
+          <p>{t.step3Desc}</p>
+        </div>
+        <div className="card glass-panel welcome-card">
+          <div className="welcome-card-icon"><FileOutput size={24} /></div>
+          <h3>{t.step4Title}</h3>
+          <p>{t.step4Desc}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function App() {
   const [lang, setLang] = useState<Language>(() => {
@@ -124,6 +180,14 @@ function App() {
     }
     init();
   }, [lang]);
+
+  const handleHardReset = () => {
+    if (window.confirm(t.hardResetConfirm)) {
+      indexedDB.deleteDatabase('manifest-cache'); // Generic way if locaf_orage is used
+      localStorage.removeItem('manifest_version');
+      window.location.reload();
+    }
+  };
 
   const handleTogglePerk = (hash: number) => {
     setSelectedPerks(prev => {
@@ -253,9 +317,14 @@ function App() {
             </div>
           </div>
         ) : (
-          <button className="btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => window.location.reload()}>
-            {t.retryBtn}
-          </button>
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <button className="btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => window.location.reload()}>
+              {t.retryBtn}
+            </button>
+            <button className="btn-secondary" style={{ marginTop: '1.5rem' }} onClick={handleHardReset}>
+              <RefreshCcw size={18} /> {t.hardReset}
+            </button>
+          </div>
         )}
       </div>
     );
@@ -266,36 +335,37 @@ function App() {
       <div className="container">
         <header className="app-header">
           <div className="header-top">
-            <div>
-              <h1 className="app-title">{t.title}</h1>
-              <p className="app-subtitle">{t.subtitle}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flex: 1 }}>
+              <div>
+                <h1 className="app-title">{t.title}</h1>
+                <p className="app-subtitle">{t.subtitle}</p>
+              </div>
+              <div className="header-search">
+                <WeaponSearch items={items} searchIndex={searchIndex} onSelect={handleSelectWeapon} lang={lang} />
+              </div>
             </div>
+            
             <div className="header-actions">
               <div className="lang-toggle-container">
                 <button 
                   className={`lang-btn ${lang === 'en' ? 'active' : ''}`} 
                   onClick={() => setLang('en')}
-                  title={t.langEnDesc}
                 >
                   EN
                 </button>
                 <button 
                   className={`lang-btn ${lang === 'de' ? 'active' : ''}`} 
                   onClick={() => setLang('de')}
-                  title={t.langDeDesc}
                 >
                   DE
                 </button>
                 <div className="lang-helper">
-                  <Info size={14} />
+                  <Info size={16} />
                   <div className="lang-tooltip">
                     <p><strong>EN:</strong> {t.langEnDesc}</p>
                     <p><strong>DE:</strong> {t.langDeDesc}</p>
                   </div>
                 </div>
-              </div>
-              <div className="header-search">
-                <WeaponSearch items={items} searchIndex={searchIndex} onSelect={handleSelectWeapon} lang={lang} />
               </div>
             </div>
           </div>
@@ -317,10 +387,15 @@ function App() {
               onSelectEntry={handleSelectEntry}
               labels={{
                  header: t.myWishlist,
-                 importBtn: lang === 'de' ? 'JSON Importieren' : 'Import JSON',
-                 exportBtn: lang === 'de' ? 'Exportieren als' : 'Export as'
+                 importBtn: lang === 'de' ? 'Importieren' : 'Import JSON',
+                 exportBtn: lang === 'de' ? 'Exportieren' : 'Export as'
               }}
             />
+            {items && Object.keys(items).length > 0 && (
+               <button className="btn-secondary" style={{ marginTop: 'auto', border: 'none', fontSize: '0.8rem', opacity: 0.5 }} onClick={handleHardReset}>
+                 <RefreshCcw size={14} /> {t.hardReset}
+               </button>
+            )}
           </section>
 
           <section className="column-right">
@@ -361,11 +436,7 @@ function App() {
                 </div>
               </div>
             ) : (
-              <div className="card glass-panel empty-state">
-                <Database size={48} style={{ marginBottom: '1rem' }} />
-                <h3>{t.noWeaponSelected}</h3>
-                <p>{t.searchInstructions}</p>
-              </div>
+              <IntroView t={t} />
             )}
           </section>
         </main>
