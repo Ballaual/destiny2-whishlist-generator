@@ -1,8 +1,6 @@
 import localforage from 'localforage';
 
 const BUNGIE_ROOT = 'https://www.bungie.net';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const MANIFEST_API = `${BUNGIE_ROOT}/Platform/Destiny2/Manifest/`;
 
 export const manifestCache = localforage.createInstance({
   name: 'Destiny2Manifest'
