@@ -7,6 +7,8 @@ export interface WishlistEntry {
   perkHashes: number[];
   notes?: string;
   tags?: string[];
+  name?: string;
+  description?: string;
 }
 
 interface WishlistManagerProps {
@@ -92,7 +94,9 @@ export function WishlistManager({
                       />
                     )}
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{weapon.displayProperties.name}</div>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                        {entry.name || weapon.displayProperties.name}
+                      </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.2rem' }}>
                         {entry.tags && entry.tags.length > 0 && (
                           <div style={{ display: 'flex', gap: '0.25rem' }}>
@@ -101,7 +105,9 @@ export function WishlistManager({
                             ))}
                           </div>
                         )}
-                        <span>{entry.perkHashes.length} Perks {entry.notes && `• ${entry.notes}`}</span>
+                        <span>
+                          {entry.perkHashes.length} Perks {(entry.notes || entry.description) && `• ${entry.notes || entry.description}`}
+                        </span>
                       </div>
                     </div>
                     <button 

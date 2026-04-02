@@ -24,6 +24,8 @@ const TRANSLATIONS = {
     perkConfig: 'Perk Configuration',
     saveGodRoll: 'Save God-Roll',
     notesPlaceholder: 'Notes (e.g. PvP, Raid, etc.)',
+    entryNamePlaceholder: 'Roll Name (Optional)',
+    entryDescriptionPlaceholder: 'Description (Optional)',
     addBtn: 'Add',
     updateBtn: 'Update',
     cancelBtn: 'Cancel',
@@ -59,6 +61,8 @@ const TRANSLATIONS = {
     perkConfig: 'Perk-Konfiguration',
     saveGodRoll: 'God-Roll speichern',
     notesPlaceholder: 'Notizen (z.B. PvP, Raid, etc.)',
+    entryNamePlaceholder: 'Roll Name (Optional)',
+    entryDescriptionPlaceholder: 'Beschreibung (Optional)',
     addBtn: 'Hinzufügen',
     updateBtn: 'Aktualisieren',
     cancelBtn: 'Abbrechen',
@@ -165,6 +169,12 @@ function App() {
   const [notes, setNotes] = useState(() => {
     return localStorage.getItem('d2_wishlist_notes') || '';
   });
+  const [entryName, setEntryName] = useState(() => {
+    return localStorage.getItem('d2_wishlist_entry_name') || '';
+  });
+  const [entryDescription, setEntryDescription] = useState(() => {
+    return localStorage.getItem('d2_wishlist_entry_description') || '';
+  });
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [wishlistName, setWishlistName] = useState(() => {
@@ -225,6 +235,14 @@ function App() {
   useEffect(() => {
     localStorage.setItem('d2_wishlist_notes', notes);
   }, [notes]);
+
+  useEffect(() => {
+    localStorage.setItem('d2_wishlist_entry_name', entryName);
+  }, [entryName]);
+
+  useEffect(() => {
+    localStorage.setItem('d2_wishlist_entry_description', entryDescription);
+  }, [entryDescription]);
 
   useEffect(() => {
     localStorage.setItem('d2_wishlist_selected_tags', JSON.stringify(selectedTags));
@@ -326,6 +344,8 @@ function App() {
     setSelectedWeaponHash(weapon.hash);
     setSelectedPerks(new Set());
     setNotes('');
+    setEntryName('');
+    setEntryDescription('');
     setEditingIndex(null);
   };
 
@@ -338,7 +358,9 @@ function App() {
         itemHash: selectedWeapon.hash,
         perkHashes: Array.from(selectedPerks),
         notes: notes.trim(),
-        tags: selectedTags
+        tags: selectedTags,
+        name: entryName.trim(),
+        description: entryDescription.trim()
       };
       setWishlistEntries(newEntries);
       setEditingIndex(null);
@@ -347,7 +369,9 @@ function App() {
         itemHash: selectedWeapon.hash,
         perkHashes: Array.from(selectedPerks),
         notes: notes.trim(),
-        tags: selectedTags
+        tags: selectedTags,
+        name: entryName.trim(),
+        description: entryDescription.trim()
       }]);
     }
 
@@ -355,6 +379,8 @@ function App() {
     setSelectedPerks(new Set());
     setSelectedTags([]);
     setNotes('');
+    setEntryName('');
+    setEntryDescription('');
   };
 
   const handleExport = (format: string) => {
@@ -374,11 +400,11 @@ function App() {
           data: wishlistEntries.map(entry => {
             const weapon = items[(entry.itemHash >>> 0).toString()];
             return {
-              name: weapon?.displayProperties?.name || "",
-              description: entry.notes || "",
+              name: entry.name || weapon?.displayProperties?.name || "",
+              description: entry.description || entry.notes || "",
               hash: entry.itemHash,
               plugs: entry.perkHashes.map(h => [h]),
-              tags: entry.tags && entry.tags.length > 0 ? entry.tags : ["GodPVE"]
+              tags: entry.tags && entry.tags.length > 0 ? entry.tags : []
             };
           })
         };
@@ -389,16 +415,21 @@ function App() {
         const entries = wishlistEntries.map(entry => {
           const weapon = items[(entry.itemHash >>> 0).toString()];
           const weaponName = weapon?.displayProperties?.name || "Unknown Weapon";
-          const tagsStr = entry.tags && entry.tags.length > 0 ? entry.tags.map(t => t.toLowerCase()).join(',') : "god-pve";
-          const notes = entry.notes ? `tags:${tagsStr}, ${entry.notes}` : `tags:${tagsStr}`;
+          const tagsStr = entry.tags && entry.tags.length > 0 ? entry.tags.map(t => t.toLowerCase()).join(',') : "";
+          const comments = [];
+          if (entry.name) comments.push(entry.name);
+          if (entry.description) comments.push(entry.description);
+          if (entry.notes) comments.push(entry.notes);
+          
+          const notesStr = tagsStr ? `tags:${tagsStr}${comments.length ? `, ${comments.join(' - ')}` : ''}` : (comments.length ? comments.join(' - ') : '');
 
-          return `// ${weaponName} (${tagsStr})\n//notes: ${notes}\ndimwishlist:item=${entry.itemHash}${entry.perkHashes.length > 0 ? `&perks=${entry.perkHashes.join(',')}` : ''}`;
+          return `// ${entry.name || weaponName}${tagsStr ? ` (${tagsStr})` : ''}\n//notes: ${notesStr}\ndimwishlist:item=${entry.itemHash}${entry.perkHashes.length > 0 ? `&perks=${entry.perkHashes.join(',')}` : ''}`;
         }).join('\n\n');
         content = header + entries;
         mimeType = 'text/plain';
         fileName = `d2wlg_dim_${safeName}.txt`;
       } else if (format === 'csv') {
-        const header = 'Name,Hash,Perks,Tags,Notes\n';
+        const header = 'Weapon,Hash,Perks,Tags,Notes,Name,Description\n';
         const rows = wishlistEntries.map(entry => {
           const weapon = items[(entry.itemHash >>> 0).toString()];
           const weaponName = weapon?.displayProperties?.name || "Unknown Weapon";
@@ -409,7 +440,9 @@ function App() {
           const perksStr = perkNames.join(' | ');
           const tagsStr = entry.tags?.join(' | ') || '';
           const notesStr = entry.notes?.replace(/"/g, '""') || '';
-          return `"${weaponName}","${entry.itemHash}","${perksStr}","${tagsStr}","${notesStr}"`;
+          const nameStr = entry.name?.replace(/"/g, '""') || '';
+          const descStr = entry.description?.replace(/"/g, '""') || '';
+          return `"${weaponName}","${entry.itemHash}","${perksStr}","${tagsStr}","${notesStr}","${nameStr}","${descStr}"`;
         }).join('\n');
         content = header + rows;
         mimeType = 'text/csv';
@@ -446,6 +479,8 @@ function App() {
     setSelectedPerks(new Set(entry.perkHashes));
     setSelectedTags(entry.tags || []);
     setNotes(entry.notes || '');
+    setEntryName(entry.name || '');
+    setEntryDescription(entry.description || '');
     setEditingIndex(wishlistEntries.indexOf(entry));
   };
 
@@ -632,12 +667,30 @@ function App() {
                       </button>
                     ))}
                   </div>
-                  <input
-                    type="text"
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <input
+                      type="text"
+                      className="input-primary"
+                      placeholder={t.entryNamePlaceholder}
+                      value={entryName}
+                      onChange={(e) => setEntryName(e.target.value)}
+                      style={{ fontSize: '0.85rem' }}
+                    />
+                    <input
+                      type="text"
+                      className="input-primary"
+                      placeholder={t.notesPlaceholder}
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      style={{ fontSize: '0.85rem' }}
+                    />
+                  </div>
+                  <textarea
                     className="input-primary"
-                    placeholder={t.notesPlaceholder}
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder={t.entryDescriptionPlaceholder}
+                    value={entryDescription}
+                    onChange={(e) => setEntryDescription(e.target.value)}
+                    style={{ fontSize: '0.85rem', minHeight: '60px', resize: 'vertical' }}
                   />
                   <div style={{ display: 'flex', gap: '1rem' }}>
                     <button className="btn-primary" onClick={handleSaveEntry} style={{ flex: 1, justifyContent: 'center' }}>
