@@ -12,8 +12,10 @@ interface PerkSelectorProps {
 
 // Language-independent category hashes for weapon perks
 const PERK_CATEGORY_HASHES = [
-  4241352761, // Weapon Perks
-  3705191010, // Intrinsic
+  4241352761, // Weapon Perks (Standard)
+  4241085061, // WEAPON PERKS (Found by user)
+  3705191010, // Intrinsic (Weapon Archetype)
+  3956125808, // INTRINSIC TRAITS (Found by user)
   2216078230, // Origin Trait
   2611454766, // Additional Weapon Perks
   1362267390, // Alternate Perks
@@ -22,7 +24,9 @@ const PERK_CATEGORY_HASHES = [
 // Explicitly ignore these
 const IGNORE_CATEGORY_HASHES = [
   2048505904, // Modifications
+  2685412949, // WEAPON MODS (Found by user)
   267439160,  // Cosmetics
+  2048875504, // WEAPON COSMETICS (Found by user)
   3532890696, // Masterwork
   1053423714, // Trackers
 ];
@@ -68,7 +72,22 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
     const isWhitelisted = PERK_CATEGORY_HASHES.includes(cat.socketCategoryHash);
     const isBlacklisted = IGNORE_CATEGORY_HASHES.includes(cat.socketCategoryHash);
     
-    if (isWhitelisted && !isBlacklisted) {
+    // Fallback: If not explicitly blacklisted, check the name for keywords
+    const catDef = socketCategories[cat.socketCategoryHash];
+    const catName = (catDef?.displayProperties?.name || '').toUpperCase();
+    const hasPerkKeyword = 
+      catName.includes('PERK') || 
+      catName.includes('TRAIT') || 
+      catName.includes('EIGENSCHAFT') || 
+      catName.includes('MAGAZIN') || 
+      catName.includes('LAUF') || 
+      catName.includes('MUZZLE') || 
+      catName.includes('FRAME') || 
+      catName.includes('GEHÄUSE') || 
+      catName.includes('PLUG') ||
+      catName.includes('ORIGIN');
+
+    if ((isWhitelisted || hasPerkKeyword) && !isBlacklisted) {
         validSocketIndices.push(...cat.socketIndices);
     }
   });
