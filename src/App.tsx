@@ -1131,30 +1131,49 @@ function App() {
                         </div>
                       )}
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                          {['GodPvE', 'GodPvP', 'PvE', 'PvP'].map(tag => (
-                            <button
-                              key={tag}
-                              onClick={() => handleToggleTag(tag)}
-                              className={`tag-btn tag-${tag.toLowerCase()} ${selectedTags.includes(tag) ? 'active' : ''}`}
-                            >
-                              {tag}
-                            </button>
-                          ))}
-                        </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                          {['Mouse', 'Controller'].map(tag => (
-                            <button
-                              key={tag}
-                              onClick={() => handleToggleTag(tag)}
-                              className={`tag-btn tag-${tag.toLowerCase()} ${selectedTags.includes(tag) ? 'active' : ''}`}
-                            >
-                              {tag}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                      {(() => {
+                        const standardTags = ['GodPvE', 'GodPvP', 'PvE', 'PvP', 'Mouse', 'Controller'];
+                        const standardTagsLower = standardTags.map(t => t.toLowerCase());
+                        const extraTags = selectedTags.filter(t => !standardTagsLower.includes(t.toLowerCase()));
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                              {['GodPvE', 'GodPvP', 'PvE', 'PvP'].map(tag => (
+                                <button
+                                  key={tag}
+                                  onClick={() => handleToggleTag(tag)}
+                                  className={`tag-btn tag-${tag.toLowerCase()} ${selectedTags.map(t => t.toLowerCase()).includes(tag.toLowerCase()) ? 'active' : ''}`}
+                                >
+                                  {tag}
+                                </button>
+                              ))}
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                              {['Mouse', 'Controller'].map(tag => (
+                                <button
+                                  key={tag}
+                                  onClick={() => handleToggleTag(tag)}
+                                  className={`tag-btn tag-${tag.toLowerCase()} ${selectedTags.map(t => t.toLowerCase()).includes(tag.toLowerCase()) ? 'active' : ''}`}
+                                >
+                                  {tag}
+                                </button>
+                              ))}
+                              {extraTags.map(tag => (
+                                <button
+                                  key={tag}
+                                  onClick={() => handleToggleTag(tag)}
+                                  className={`tag-btn active`}
+                                  title={lang === 'de' ? 'Tag entfernen' : 'Remove tag'}
+                                  style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                                >
+                                  {tag}
+                                  <span style={{ opacity: 0.7, fontSize: '0.9em', lineHeight: 1 }}>×</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                         <input
                           type="text"
