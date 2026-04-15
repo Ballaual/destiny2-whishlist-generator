@@ -27,11 +27,15 @@ const FORCE = process.argv.includes('--force');
 
 async function fetchJSON(url) {
   console.log(`  ↓ Fetching: ${url}`);
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) {
     throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
   }
-  return res.json();
+  const data = await res.json();
+  if (data.ErrorCode && data.ErrorCode !== 1) {
+    throw new Error(`Bungie API Error: ${data.ErrorCode} ${data.ErrorStatus} - ${data.Message}`);
+  }
+  return data;
 }
 
 /**
@@ -199,6 +203,12 @@ function buildOptimizedItems(rawItems, plugSetsRaw) {
   }
 
   console.log(`  Kept: ${weaponCount} weapons, ${perkCount} perks. Stripped: ${skippedCount} items.`);
+
+  // Validation: fail if we didn't find any weapons or perks
+  if (weaponCount === 0 || perkCount === 0) {
+    throw new Error(`Sanity check failed: found ${weaponCount} weapons and ${perkCount} perks. Aborting update.`);
+  }
+
   return optimized;
 }
 
@@ -279,7 +289,17 @@ async function main() {
 
   const writeJSON = (filename, data) => {
     const filePath = path.join(MANIFEST_DIR, filename);
-    const json = JSON.stringify(data);
+    const json = JSON.stringify(data, null, 1);
+    
+    // Check if content is actually different
+    if (fs.existsSync(filePath)) {
+      const existing = fs.readFileSync(filePath, 'utf-8');
+      if (existing === json) {
+        console.log(`  – ${filename} (unchanged)`);
+        return;
+      }
+    }
+
     fs.writeFileSync(filePath, json, 'utf-8');
     const sizeMB = (Buffer.byteLength(json, 'utf-8') / 1024 / 1024).toFixed(1);
     console.log(`  ✓ ${filename} (${sizeMB} MB)`);
@@ -290,17 +310,21 @@ async function main() {
   writeJSON('plugsets.json', plugSets);
   writeJSON('socket_categories.json', socketCats);
 
-  // Write version file
-  const versionData = {
-    version: bungieVersion,
-    updatedAt: new Date().toISOString(),
-  };
-  fs.writeFileSync(VERSION_FILE, JSON.stringify(versionData, null, 2), 'utf-8');
-  console.log(`  ✓ version.json`);
+  // 6. Write version file ONLY if it changed
+  console.log('');
+  if (currentVersion !== bungieVersion || FORCE) {
+    const versionData = {
+      version: bungieVersion,
+    };
+    fs.writeFileSync(VERSION_FILE, JSON.stringify(versionData, null, 2), 'utf-8');
+    console.log(`✓ version.json updated to ${bungieVersion}`);
+  } else {
+    console.log('✓ Manifest content updated but version string remains the same.');
+  }
 
   console.log('');
   console.log('══════════════════════════════════════════');
-  console.log(`✓ Manifest updated to version: ${bungieVersion}`);
+  console.log(`✓ Manifest sync complete.`);
   console.log('══════════════════════════════════════════');
 }
 

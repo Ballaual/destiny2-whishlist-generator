@@ -21,11 +21,12 @@ jobs:
           node-version: 20
 
       - name: Run manifest update script
-        run: node scripts/update-manifest.mjs
+        run: node scripts/update-manifest.mjs --force
 
       - name: Check for changes
         id: changes
         run: |
+          git status
           git add public/manifest/
           if git diff --staged --quiet; then
             echo "changed=false" >> $GITHUB_OUTPUT
@@ -33,6 +34,7 @@ jobs:
           else
             echo "changed=true" >> $GITHUB_OUTPUT
             echo "Manifest changes detected!"
+            git status --short
           fi
 
       - name: Commit and push
