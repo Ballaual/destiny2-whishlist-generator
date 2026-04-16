@@ -294,6 +294,19 @@ export async function getManifestData() {
 }
 
 /**
+ * Helper to identify if a plug is an Enhanced perk.
+ */
+export function isEnhancedPerk(hash: number, items: Record<string, DestinyItemDefinition>): boolean {
+  const p = items[hash.toString()];
+  if (!p) return false;
+  const pName = p.displayProperties?.name?.toLowerCase() || '';
+  const pType = p.itemTypeDisplayName?.toLowerCase() || '';
+  return pName.startsWith('enhanced ') || pName.startsWith('verbessert') ||
+         pType.toLowerCase().includes('enhanced trait') || 
+         pType.toLowerCase().includes('verbesserte eigenschaft');
+}
+
+/**
  * Helper to identify if a plug is a Masterwork (Tier/Meisterwerk).
  */
 export function isMasterwork(hash: number, items: Record<string, DestinyItemDefinition>): boolean {
@@ -306,8 +319,10 @@ export function isMasterwork(hash: number, items: Record<string, DestinyItemDefi
          pType.includes('masterwork') || pType.includes('meisterwerk');
 }
 
+
 /**
  * Groups a flat list of perk hashes into columns (sockets) based on the weapon's definition.
+
  */
 export function groupPerksBySocket(
   itemHash: number, 

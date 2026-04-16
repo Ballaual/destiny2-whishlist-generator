@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { loadManifest, groupPerksBySocket, isMasterwork } from './lib/manifest';
+import { loadManifest, groupPerksBySocket, isMasterwork, isEnhancedPerk } from './lib/manifest';
+
 
 import type { DestinyItemDefinition, DestinyPlugSetDefinition, ReleaseMap } from './lib/manifest';
 
@@ -703,14 +704,11 @@ function App() {
           if (entry.notes) comments.push(entry.notes);
 
           const tagsStr = entry.tags && entry.tags.length > 0 ? entry.tags.map(t => t.toLowerCase()).join(',') : "";
-          const notesStr = tagsStr ? `tags:${tagsStr}${comments.length ? `, ${comments.join(' - ')}` : ''}` : (comments.length ? comments.join(' - ') : '');
-
+          const notesStr = (tagsStr ? `tags:${tagsStr}${comments.length ? `, ${comments.join(' - ')}` : ''}` : (comments.length ? comments.join(' - ') : '')).replace(/\r?\n/g, ' ').trim();
+          
           const commentPrefix = entry.name ? `${entry.name} [${weaponName}]` : weaponName;
-          const perksToExport = entry.perkHashes.filter(p => !isMasterwork(p, items));
+          const perksToExport = entry.perkHashes.filter(p => !isMasterwork(p, items) && !isEnhancedPerk(p, items));
           return `// ${commentPrefix}${tagsStr ? ` (${tagsStr})` : ''}\n//notes: ${notesStr}\ndimwishlist:item=${entry.itemHash}${perksToExport.length > 0 ? `&perks=${perksToExport.join(',')}` : ''}`;
-
-
-
         }).join('\n\n');
         content = header + entries;
         mimeType = 'text/plain';
