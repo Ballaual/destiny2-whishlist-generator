@@ -891,6 +891,7 @@ function App() {
                   importBtn: lang === 'de' ? 'Importieren' : 'Import',
                   exportBtn: lang === 'de' ? 'Exportieren' : 'Export'
                 }}
+                searchIndex={searchIndex}
               />
             </div>
           </section>

@@ -30,11 +30,13 @@ interface WishlistManagerProps {
     importBtn: string;
     exportBtn: string;
   };
+  searchIndex?: Record<number, { en: string; de: string }>;
 }
 
 export function WishlistManager({ 
   entries, items, lang, onExport, onImport, onRemove, onCopy, onSelectEntry, 
-  wishlistName, onWishlistNameChange, wishlistDescription, onWishlistDescriptionChange, labels 
+  wishlistName, onWishlistNameChange, wishlistDescription, onWishlistDescriptionChange, labels,
+  searchIndex
 }: WishlistManagerProps) {
   const [exportFormat, setExportFormat] = useState('internal');
   const [filterText, setFilterText] = useState('');
@@ -76,7 +78,11 @@ export function WishlistManager({
       (entry.name?.toLowerCase().includes(query)) ||
       (entry.itemHash.toString().includes(query)) ||
       (entry.notes?.toLowerCase().includes(query)) ||
-      (entry.description?.toLowerCase().includes(query))
+      (entry.description?.toLowerCase().includes(query)) ||
+      (searchIndex && searchIndex[entry.itemHash] && (
+        searchIndex[entry.itemHash].en.toLowerCase().includes(query) ||
+        searchIndex[entry.itemHash].de.toLowerCase().includes(query)
+      ))
     );
 
     // Rarity filter
