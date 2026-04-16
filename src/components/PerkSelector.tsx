@@ -46,9 +46,9 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, search
       return true;
     }
 
-    const typeDisplayName = item.itemTypeDisplayName || '';
-    // Specifically check for "Item: Enhanced" prefix to avoid false positives in names
-    if (typeDisplayName.startsWith('Item: Enhanced') || typeDisplayName.startsWith('Item: Verbessert')) {
+    const typeDisplayName = (item.itemTypeDisplayName || '').toLowerCase();
+    // Specifically check for "enhanced" / "verbessert" to support newer items like "Enhanced Barrel"
+    if (typeDisplayName.includes('enhanced') || typeDisplayName.includes('verbessert')) {
       return true;
     }
 
@@ -149,8 +149,8 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, search
       const catHash = cat.socketCategoryHash;
       if (!catHash) return;
 
-      if (cat.socketIndices) {
-        validSocketIndices.push(...cat.socketIndices);
+      if (cat.socketIndexes) {
+        validSocketIndices.push(...cat.socketIndexes);
       }
     });
   }

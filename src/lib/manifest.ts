@@ -39,7 +39,7 @@ export interface DestinyItemDefinition {
     socketEntries: readonly DestinyItemSocketEntryDefinition[];
     socketCategories: readonly {
       socketCategoryHash: number;
-      socketIndices: readonly number[];
+      socketIndexes: readonly number[];
     }[];
   };
 }
