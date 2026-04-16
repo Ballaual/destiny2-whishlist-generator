@@ -1059,11 +1059,15 @@ function App() {
                         <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: '1.4' }}>
                           {selectedWeapon.flavorText || selectedWeapon.displayProperties?.description}
                         </div>
-                        {selectedWeapon.displaySource && (
+                        {selectedWeapon.collectibleSource ? (
+                          <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            {selectedWeapon.collectibleSource}
+                          </div>
+                        ) : selectedWeapon.displaySource ? (
                           <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                             <strong>{t.sourceLabel}:</strong> {selectedWeapon.displaySource}
                           </div>
-                        )}
+                        ) : null}
 
                         {/* Season / Release Badge from traitIds + releases.json */}
                         {(() => {

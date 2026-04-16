@@ -18,6 +18,8 @@ export interface DestinyItemDefinition {
   screenshot?: string;
   flavorText?: string;
   displaySource?: string;
+  collectibleHash?: number;
+  collectibleSource?: string;
   defaultDamageTypeHash?: number;
   redacted?: boolean;
   itemCategoryHashes?: number[];

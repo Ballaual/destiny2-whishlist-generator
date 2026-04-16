@@ -62,6 +62,7 @@ function stripWeapon(item) {
     defaultDamageTypeHash: item.defaultDamageTypeHash,
     redacted: item.redacted,
     itemCategoryHashes: item.itemCategoryHashes,
+    collectibleHash: item.collectibleHash,
   };
 
   // Season hash – indicates which season the weapon was released in
@@ -154,10 +155,11 @@ function stripPerk(item) {
 /**
  * Build an optimized items file: only weapons + referenced perks.
  */
-function buildOptimizedItems(rawItems, plugSetsRaw) {
+function buildOptimizedItems(rawItems, plugSetsRaw, collectiblesRaw) {
   // 1. Collect all perk hashes referenced by any plug set
   const perkHashes = new Set();
   const plugSets = plugSetsRaw?.Response || plugSetsRaw;
+  const collectibles = collectiblesRaw?.Response || collectiblesRaw;
   for (const hash in plugSets) {
     const ps = plugSets[hash];
     if (ps.reusablePlugItems) {
@@ -202,7 +204,11 @@ function buildOptimizedItems(rawItems, plugSetsRaw) {
     
     if (item.itemType === 3) {
       // Weapon
-      optimized[hash] = stripWeapon(item);
+      const stripped = stripWeapon(item);
+      if (item.collectibleHash && collectibles && collectibles[item.collectibleHash]) {
+        stripped.collectibleSource = collectibles[item.collectibleHash].sourceString;
+      }
+      optimized[hash] = stripped;
       weaponCount++;
     } else if (perkHashes.has(parseInt(hash, 10)) || perkHashes.has(parseInt(hash, 10) >>> 0)) {
       // Perk referenced by a plug set
@@ -285,10 +291,12 @@ async function main() {
   console.log('[5/7] Downloading SocketCategories...');
   const socketCatsRaw = await fetchJSON(`${BUNGIE_ROOT}${enPaths.DestinySocketCategoryDefinition}`);
 
-  console.log('[6/7] Downloading Season Definitions (EN + DE)...');
-  const [seasonsEnRaw, seasonsDeRaw] = await Promise.all([
+  console.log('[6/7] Downloading Season and Collectible Definitions (EN + DE)...');
+  const [seasonsEnRaw, seasonsDeRaw, collectiblesEnRaw, collectiblesDeRaw] = await Promise.all([
     fetchJSON(`${BUNGIE_ROOT}${enPaths.DestinySeasonDefinition}`),
     fetchJSON(`${BUNGIE_ROOT}${dePaths.DestinySeasonDefinition}`),
+    fetchJSON(`${BUNGIE_ROOT}${enPaths.DestinyCollectibleDefinition}`),
+    fetchJSON(`${BUNGIE_ROOT}${dePaths.DestinyCollectibleDefinition}`),
   ]);
 
   // 5. Build releases.json: vXXX -> season info
@@ -341,9 +349,9 @@ async function main() {
   console.log('[7/7] Optimizing and writing manifest files...');
 
   console.log('  --- EN Items ---');
-  const optimizedEn = buildOptimizedItems(itemsEnRaw, plugSetsRaw);
+  const optimizedEn = buildOptimizedItems(itemsEnRaw, plugSetsRaw, collectiblesEnRaw);
   console.log('  --- DE Items ---');
-  const optimizedDe = buildOptimizedItems(itemsDeRaw, plugSetsRaw);
+  const optimizedDe = buildOptimizedItems(itemsDeRaw, plugSetsRaw, collectiblesDeRaw);
 
   // PlugSets: keep as-is (already small ~7MB)
   const plugSets = plugSetsRaw?.Response || plugSetsRaw;
