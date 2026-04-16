@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { loadManifest, groupPerksBySocket, isMasterwork, isEnhancedPerk } from './lib/manifest';
+import { loadManifest, groupPerksBySocket, isMasterwork, isEnhancedPerk, isValidWishlistPlug } from './lib/manifest';
 
 
 import type { DestinyItemDefinition, DestinyPlugSetDefinition, ReleaseMap } from './lib/manifest';
@@ -683,7 +683,10 @@ function App() {
               name: entry.name || "",
               description: entry.description || entry.notes || "",
               hash: entry.itemHash,
-              plugs: groupPerksBySocket(entry.itemHash, entry.perkHashes.filter(p => !isMasterwork(p, items)), { items, plugSets }),
+              plugs: groupPerksBySocket(entry.itemHash, entry.perkHashes.filter(p => {
+                const it = items[p.toString()];
+                return it && isValidWishlistPlug(it) && !isMasterwork(p, items);
+              }), { items, plugSets }),
               tags: entry.tags && entry.tags.length > 0 ? entry.tags : []
 
             };
@@ -707,7 +710,21 @@ function App() {
           const notesStr = (tagsStr ? `tags:${tagsStr}${comments.length ? `, ${comments.join(' - ')}` : ''}` : (comments.length ? comments.join(' - ') : '')).replace(/\r?\n/g, ' ').trim();
           
           const commentPrefix = entry.name ? `${entry.name} [${weaponName}]` : weaponName;
-          const perksToExport = entry.perkHashes.filter(p => !isMasterwork(p, items) && !isEnhancedPerk(p, items));
+          
+          // Use groupPerksBySocket to maintain the correct column-based order
+          const grouped = groupPerksBySocket(entry.itemHash, entry.perkHashes, { items, plugSets });
+          const flatPerks = grouped.flat();
+          
+          // Filter out Masterworks and Enhanced perks for DIM (it usually wants base perks)
+          // Also ensure they are valid wishlist plugs (filters out trackers, etc.)
+          const filteredPerks = flatPerks.filter(p => {
+            const it = items[p.toString()];
+            return it && isValidWishlistPlug(it) && !isMasterwork(p, items) && !isEnhancedPerk(p, items);
+          });
+          
+          // Ensure uniqueness
+          const perksToExport = Array.from(new Set(filteredPerks));
+          
           return `// ${commentPrefix}${tagsStr ? ` (${tagsStr})` : ''}\n//notes: ${notesStr}\ndimwishlist:item=${entry.itemHash}${perksToExport.length > 0 ? `&perks=${perksToExport.join(',')}` : ''}`;
         }).join('\n\n');
         content = header + entries;
@@ -718,7 +735,10 @@ function App() {
         const rows = wishlistEntries.map(entry => {
           const weapon = items[(entry.itemHash >>> 0).toString()];
           const weaponName = weapon?.displayProperties?.name || "Unknown Weapon";
-          const perksToExport = entry.perkHashes.filter(p => !isMasterwork(p, items));
+          const perksToExport = entry.perkHashes.filter(p => {
+            const it = items[p.toString()];
+            return it && isValidWishlistPlug(it) && !isMasterwork(p, items);
+          });
           const perkNames = perksToExport.map(h => {
             const p = items[(h >>> 0).toString()];
             return p?.displayProperties?.name || h.toString();
@@ -1175,10 +1195,7 @@ function App() {
                                   const perkItem = items[(hash >>> 0).toString()];
                                   if (!perkItem) return null;
                                   const perkName = perkItem.displayProperties?.name || 'Unknown';
-                                  const typeDisplayName = (perkItem.itemTypeDisplayName || '').toLowerCase();
-                                  const isEnhanced = perkItem.tooltipNotifications?.some((n: any) => n.displayStyle === "ui_display_style_enhanced_perk") ||
-                                    typeDisplayName.includes('enhanced') || typeDisplayName.includes('verbessert') ||
-                                    perkItem.itemCategoryHashes?.includes(2237026461) || false;
+                                  const isEnhanced = isEnhancedPerk(hash, items);
                                   const isDragging = dragInfo?.columnIndex === group.columnIndex && dragInfo?.fromIdx === idx;
                                   const isDragOver = dragOverInfo?.columnIndex === group.columnIndex && dragOverInfo?.overIdx === idx;
 

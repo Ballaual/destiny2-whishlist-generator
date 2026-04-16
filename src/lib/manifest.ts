@@ -41,7 +41,7 @@ export interface DestinyItemDefinition {
     socketEntries: readonly DestinyItemSocketEntryDefinition[];
     socketCategories: readonly {
       socketCategoryHash: number;
-      socketIndexes: readonly number[];
+      socketIndices: readonly number[];
     }[];
   };
 }
@@ -295,15 +295,31 @@ export async function getManifestData() {
 
 /**
  * Helper to identify if a plug is an Enhanced perk.
+ * Matches logic from PerkSelector for consistency.
  */
 export function isEnhancedPerk(hash: number, items: Record<string, DestinyItemDefinition>): boolean {
   const p = items[hash.toString()];
   if (!p) return false;
+
+  // Official Bungie display style for enhanced perks
+  if (p.tooltipNotifications?.some(n => n.displayStyle === "ui_display_style_enhanced_perk")) {
+    return true;
+  }
+
+  const typeDisplayName = (p.itemTypeDisplayName || '').toLowerCase();
+  // Specifically check for "enhanced" / "verbessert" to support newer items
+  if (typeDisplayName.includes('enhanced') || typeDisplayName.includes('verbessert')) {
+    return true;
+  }
+
+  // Category hash check for "Enhanced Perks" (2237026461)
+  if (p.itemCategoryHashes?.includes(2237026461)) {
+    return true;
+  }
+
   const pName = p.displayProperties?.name?.toLowerCase() || '';
-  const pType = p.itemTypeDisplayName?.toLowerCase() || '';
-  return pName.startsWith('enhanced ') || pName.startsWith('verbessert') ||
-         pType.toLowerCase().includes('enhanced trait') || 
-         pType.toLowerCase().includes('verbesserte eigenschaft');
+  // Fallback to name-based detection
+  return pName.startsWith('enhanced ') || pName.startsWith('verbessert');
 }
 
 /**
@@ -314,9 +330,82 @@ export function isMasterwork(hash: number, items: Record<string, DestinyItemDefi
   if (!p) return false;
   const pName = p.displayProperties?.name?.toLowerCase() || '';
   const pType = p.itemTypeDisplayName?.toLowerCase() || '';
-  return pName.includes('masterwork') || pName.includes('meisterwerk') ||
-         /\b(tier|stufe)\b/.test(pName) ||
-         pType.includes('masterwork') || pType.includes('meisterwerk');
+  
+  // High tier masterworks only (Tier 10)
+  const isTierMasterwork = (pName.includes('masterwork') || pName.includes('meisterwerk') || pType.includes('masterwork') || pType.includes('meisterwerk'));
+  
+  // RegEx to check for Tier/Stufe 1-9 (we only care about 10)
+  const tierMatch = pName.match(/(tier|stufe)\s+(\d+)/);
+  const isLowTier = tierMatch && parseInt(tierMatch[2], 10) < 10;
+
+  return (isTierMasterwork || /\b(tier|stufe)\b/.test(pName)) && !isLowTier;
+}
+
+/**
+ * Validates if a plug is a "real" perk suitable for a wishlist.
+ * Filters out game-internal plugs like trackers, shaders, deepsight nodes, etc.
+ */
+export function isValidWishlistPlug(item: DestinyItemDefinition | null | undefined): boolean {
+  if (!item || !item.displayProperties) return false;
+  const name = item.displayProperties.name || '';
+  const lowerName = name.toLowerCase();
+  const typeName = (item.itemTypeDisplayName || '').toLowerCase();
+
+  // Name-based filters
+  if (
+    lowerName.includes('tracker') ||
+    lowerName.includes('shader') ||
+    lowerName.includes('memento') ||
+    lowerName.includes('level') ||
+    lowerName.includes('deepsight') ||
+    lowerName.includes('tiefenblick') ||
+    lowerName.includes('unknown perk') ||
+    lowerName.includes('unbekannter perk') ||
+    lowerName.includes('ornament') ||
+    lowerName.includes('resonant material') ||
+    lowerName.includes('resonanzmaterial') ||
+    lowerName.includes('extract pattern') ||
+    lowerName.includes('bauplan extrahieren') ||
+    lowerName.includes('enhancement') ||
+    lowerName.includes('verbesserung') ||
+    lowerName.includes('perkname-fassung') ||
+    lowerName.includes('perk-fassung') ||
+    lowerName.includes('perk socket')
+  ) return false;
+
+  // Type-based filters
+  if (
+    typeName.includes('intrinsic') ||
+    typeName.includes('inhärent') ||
+    typeName.includes('intrinsisch') ||
+    typeName.includes('shader') ||
+    typeName.includes('weapon mod') ||
+    typeName.includes('waffen-mod') ||
+    typeName.includes('ornament') ||
+    typeName.includes('flair') ||
+    typeName.includes('enhancement') ||
+    typeName.includes('verbesserung')
+  ) return false;
+
+  // Specific blacklist for "Empty" sockets and internal items
+  const blacklist = [
+    'Classified', 
+    'Empty Mod Socket', 
+    'Default Shader', 
+    'Kill Tracker', 
+    'Unknown Perk',
+    'Empty Catalyst Socket', 
+    'Empty Enhancement Socket',
+    'Leerer Katalysator-Sockel',
+    'Leerer Verbesserungs-Sockel',
+    'Empty Socket',
+    'Leerer Sockel',
+    'Leere Perkname-Fassung'
+  ];
+  
+  if (blacklist.includes(name) || lowerName.startsWith('empty ') || lowerName.startsWith('leerer ') || lowerName.startsWith('leere ') || !name.trim() || item.redacted) return false;
+
+  return true;
 }
 
 

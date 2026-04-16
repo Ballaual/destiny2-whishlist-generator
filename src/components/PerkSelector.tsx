@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Search, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import { isMasterwork, isEnhancedPerk, isValidWishlistPlug } from '../lib/manifest';
 import type { DestinyItemDefinition, DestinyPlugSetDefinition, DestinySocketCategoryDefinition, SearchIndex } from '../lib/manifest';
 
 interface PerkSelectorProps {
@@ -37,24 +38,6 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, search
   if (!weapon || !weapon.sockets) {
     return <div className="card glass-panel"><p>{lang === 'de' ? 'Diese Waffe hat keine konfigurierbaren Perks.' : 'This weapon has no configurable perks.'}</p></div>;
   }
-
-  const isEnhancedPerk = (item: DestinyItemDefinition) => {
-    if (!item) return false;
-
-    // Official Bungie display style for enhanced perks
-    if (item.tooltipNotifications?.some(n => n.displayStyle === "ui_display_style_enhanced_perk")) {
-      return true;
-    }
-
-    const typeDisplayName = (item.itemTypeDisplayName || '').toLowerCase();
-    // Specifically check for "enhanced" / "verbessert" to support newer items like "Enhanced Barrel"
-    if (typeDisplayName.includes('enhanced') || typeDisplayName.includes('verbessert')) {
-      return true;
-    }
-
-    // Category hash check for "Enhanced Perks" (2237026461)
-    return item.itemCategoryHashes?.includes(2237026461) || false;
-  };
 
   const getPlugsForSocket = (entry: any) => {
     if (!entry) return [];
@@ -100,45 +83,7 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, search
 
     return Array.from(new Set(plugHashes))
       .map(hash => getItem(hash))
-      .filter((item): item is DestinyItemDefinition => {
-        if (!item || !item.displayProperties) return false;
-        const name = item.displayProperties.name || '';
-        const lowerName = name.toLowerCase();
-        const typeName = (item.itemTypeDisplayName || '').toLowerCase();
-
-        // Name-based filters
-        if (lowerName.includes('tracker') ||
-          lowerName.includes('shader') ||
-          lowerName.includes('memento') ||
-          lowerName.includes('level') ||
-          lowerName.includes('deepsight') ||
-          lowerName.includes('tiefenblick') ||
-          lowerName.includes('unknown perk') ||
-          lowerName.includes('unbekannter perk') ||
-          lowerName.includes('ornament')) return false;
-
-        // Filter out Tier 1-9 / Stufe 1-9 masterworks
-        // These are the intermediate progression steps we don't want to show.
-        const tierMatch = lowerName.match(/(tier|stufe)\s+(\d+)/);
-        if (tierMatch) {
-          const tierValue = parseInt(tierMatch[2]);
-          if (tierValue < 10) return false;
-        }
-
-        // Type-based filters (e.g. "Item: Intrinsic", "Item: Weapon Mod", etc.)
-        if (typeName.includes('intrinsic') ||
-          typeName.includes('inhärent') ||
-          typeName.includes('intrinsisch') ||
-          typeName.includes('shader') ||
-          typeName.includes('weapon mod') ||
-          typeName.includes('waffen-mod') ||
-          typeName.includes('ornament') ||
-          typeName.includes('flair')) return false;
-
-        if (name === 'Classified' || name === 'Empty Mod Socket' || name === 'Default Shader' || name === 'Kill Tracker' || name === 'Unknown Perk' || !name.trim() || item.redacted) return false;
-
-        return true;
-      });
+      .filter((item): item is DestinyItemDefinition => isValidWishlistPlug(item));
   };
 
   const blockedSocketIndices = new Set<number>();
@@ -149,8 +94,8 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, search
       const catHash = cat.socketCategoryHash;
       if (!catHash) return;
 
-      if (cat.socketIndexes) {
-        validSocketIndices.push(...cat.socketIndexes);
+      if (cat.socketIndices) {
+        validSocketIndices.push(...cat.socketIndices);
       }
     });
   }
@@ -161,15 +106,15 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, search
   let perkColumns = filteredIndices
     .map(idx => ({ index: idx, plugs: getPlugsForSocket(weapon.sockets!.socketEntries[idx]) }))
     .filter(col => col.plugs.length > 0)
-    .map(col => ({
-      ...col,
-      plugs: [...col.plugs].sort((a, b) => {
-        const aEnhanced = isEnhancedPerk(a);
-        const bEnhanced = isEnhancedPerk(b);
-        if (aEnhanced === bEnhanced) return 0;
-        return aEnhanced ? 1 : -1;
-      })
-    }));
+      .map(col => ({
+        ...col,
+        plugs: [...col.plugs].sort((a, b) => {
+          const aEnhanced = isEnhancedPerk(a.hash, items);
+          const bEnhanced = isEnhancedPerk(b.hash, items);
+          if (aEnhanced === bEnhanced) return 0;
+          return aEnhanced ? 1 : -1;
+        })
+      }));
 
   // SUPER-EXTRACTOR FALLBACK: If no perks found via categories, scan EVERYTHING except blacklisted
   if (perkColumns.length === 0) {
@@ -180,8 +125,8 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, search
       .map(col => ({
         ...col,
         plugs: [...col.plugs].sort((a, b) => {
-          const aEnhanced = isEnhancedPerk(a);
-          const bEnhanced = isEnhancedPerk(b);
+          const aEnhanced = isEnhancedPerk(a.hash, items);
+          const bEnhanced = isEnhancedPerk(b.hash, items);
           if (aEnhanced === bEnhanced) return 0;
           return aEnhanced ? 1 : -1;
         })
@@ -263,24 +208,18 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, search
           let headerText = firstPlug?.itemTypeDisplayName?.replace(/^Item:\s*/i, '') || (lang === 'de' ? 'Perk' : 'Perk');
 
           // Rename to Masterworked if the column contains Masterwork/Tier items
-          // Using regex for 'tier' to avoid matching 'Batterie' (DE) or 'Battery'
-          const isMasterworkColumn = col.plugs.some((p: any) => {
-            const pName = p.displayProperties?.name?.toLowerCase() || '';
-            const pType = p.itemTypeDisplayName?.toLowerCase() || '';
-            return pName.includes('masterwork') || pName.includes('meisterwerk') ||
-              /\b(tier|stufe)\b/.test(pName) ||
-              pType.includes('masterwork') || pType.includes('meisterwerk');
+          const isMasterworkColumn = col.plugs.some((p: any) => isMasterwork(p.hash, items));
+          const isCatalystColumn = col.plugs.some((p: any) => {
+            const pName = (p.displayProperties?.name || '').toLowerCase();
+            return pName.includes('catalyst') || pName.includes('katalysator');
           });
 
           if (isMasterworkColumn) {
             headerText = lang === 'de' ? 'Meisterwerk' : 'Masterwork';
             // Exclusively filter for "Masterworked" or "Meisterwerk" and EXCLUDE "Tier/Stufe"
-            col.plugs = col.plugs.filter((p: any) => {
-              const pName = p.displayProperties?.name?.toLowerCase() || '';
-              const hasKeyword = pName.includes('masterwork') || pName.includes('meisterwerk');
-              const isLowTier = /\b(tier|stufe)\b/.test(pName) && !pName.includes('10'); // Keep Tier 10 if it exists
-              return hasKeyword && !isLowTier;
-            });
+            col.plugs = col.plugs.filter((p: any) => isMasterwork(p.hash, items));
+          } else if (isCatalystColumn) {
+            headerText = lang === 'de' ? 'Katalysator' : 'Catalyst';
           }
 
           return (
@@ -295,7 +234,7 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, search
                 const columnPlugHashes = col.plugs.map((p: any) => p.hash);
                 const selectedInColumn = selectedPerks.filter((h: number) => columnPlugHashes.includes(h));
                 const perColumnIndex = selectedInColumn.indexOf(perk.hash);
-                const isEnhanced = isEnhancedPerk(perk);
+                const isEnhanced = isEnhancedPerk(perk.hash, items);
                 const perkName = perk.displayProperties?.name || 'Unknown Perk';
                 const isMw = perkName.toLowerCase().includes('masterwork') || perk.itemType === 19;
 
