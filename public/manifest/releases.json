@@ -1,0 +1,182 @@
+{
+ "v300": {
+  "seasonNumber": 1,
+  "name": "Season 1",
+  "name_de": "Season 1",
+  "startDate": "1970-01-01"
+ },
+ "v310": {
+  "seasonNumber": 2,
+  "name": "Curse of Osiris",
+  "name_de": "Fluch des Osiris",
+  "startDate": "1970-01-01"
+ },
+ "v320": {
+  "seasonNumber": 3,
+  "name": "Resurgence",
+  "name_de": "Wiederauferstehung",
+  "startDate": "1970-01-01"
+ },
+ "v400": {
+  "seasonNumber": 4,
+  "name": "Season of the Outlaw",
+  "name_de": "Saison des Gesetzlosen",
+  "startDate": "1970-01-01"
+ },
+ "v410": {
+  "seasonNumber": 5,
+  "name": "Season of the Forge",
+  "name_de": "Saison der Schmiede",
+  "startDate": "1970-01-01"
+ },
+ "v420": {
+  "seasonNumber": 6,
+  "name": "Season of the Drifter",
+  "name_de": "Saison des Vagabunden",
+  "startDate": "1970-01-01"
+ },
+ "v450": {
+  "seasonNumber": 7,
+  "name": "Season of Opulence",
+  "name_de": "Saison der Opulenz",
+  "startDate": "1970-01-01"
+ },
+ "v460": {
+  "seasonNumber": 8,
+  "name": "Season of the Undying",
+  "name_de": "Saison der Unvergänglichen",
+  "startDate": "1970-01-01"
+ },
+ "v470": {
+  "seasonNumber": 9,
+  "name": "Season of Dawn",
+  "name_de": "Saison der Dämmerung",
+  "startDate": "1970-01-01"
+ },
+ "v480": {
+  "seasonNumber": 10,
+  "name": "Season of the Worthy",
+  "name_de": "Saison der Würdigen",
+  "startDate": "1970-01-01"
+ },
+ "v490": {
+  "seasonNumber": 11,
+  "name": "Season of Arrivals",
+  "name_de": "Saison der Ankunft",
+  "startDate": "1970-01-01"
+ },
+ "v500": {
+  "seasonNumber": 12,
+  "name": "Season of the Hunt",
+  "name_de": "Saison der Jagd",
+  "startDate": "1970-01-01"
+ },
+ "v510": {
+  "seasonNumber": 13,
+  "name": "Season of the Chosen",
+  "name_de": "Saison der Auserwählten",
+  "startDate": "1970-01-01"
+ },
+ "v520": {
+  "seasonNumber": 14,
+  "name": "Season of the Splicer",
+  "name_de": "Saison des Spleißers",
+  "startDate": "1970-01-01"
+ },
+ "v530": {
+  "seasonNumber": 15,
+  "name": "Season of the Lost",
+  "name_de": "Saison der Verlorenen",
+  "startDate": "1970-01-01"
+ },
+ "v540": {
+  "seasonNumber": 16,
+  "name": "Season of the Risen",
+  "name_de": "Saison der Auferstandenen",
+  "startDate": "1970-01-01"
+ },
+ "v600": {
+  "seasonNumber": 17,
+  "name": "Season of the Haunted",
+  "name_de": "Saison der Heimgesuchten",
+  "startDate": "1970-01-01"
+ },
+ "v610": {
+  "seasonNumber": 18,
+  "name": "Season of Plunder",
+  "name_de": "Saison der Plünderer",
+  "startDate": "1970-01-01"
+ },
+ "v620": {
+  "seasonNumber": 18,
+  "name": "Season of Plunder",
+  "name_de": "Saison der Plünderer",
+  "startDate": "1970-01-01"
+ },
+ "v630": {
+  "seasonNumber": 19,
+  "name": "Season of the Seraph",
+  "name_de": "Saison der Seraphe",
+  "startDate": "1970-01-01"
+ },
+ "v700": {
+  "seasonNumber": 20,
+  "name": "Season of Defiance",
+  "name_de": "Saison des Widerstands",
+  "startDate": "1970-01-01"
+ },
+ "v710": {
+  "seasonNumber": 21,
+  "name": "Season of the Deep",
+  "name_de": "Saison der Tiefe",
+  "startDate": "1970-01-01"
+ },
+ "v720": {
+  "seasonNumber": 22,
+  "name": "Season of the Witch",
+  "name_de": "Saison der Hexe",
+  "startDate": "1970-01-01"
+ },
+ "v730": {
+  "seasonNumber": 23,
+  "name": "Season of the Wish",
+  "name_de": "Saison des Wunsches",
+  "startDate": "1970-01-01"
+ },
+ "v800": {
+  "seasonNumber": 24,
+  "name": "Episode: Echoes",
+  "name_de": "Episode: Echos",
+  "startDate": "1970-01-01"
+ },
+ "v810": {
+  "seasonNumber": 25,
+  "name": "Episode: Revenant",
+  "name_de": "Episode „Wiedergänger“",
+  "startDate": "1970-01-01"
+ },
+ "v820": {
+  "seasonNumber": 26,
+  "name": "Episode: Heresy",
+  "name_de": "Episode: Ketzerei",
+  "startDate": "1970-01-01"
+ },
+ "v900": {
+  "seasonNumber": 27,
+  "name": "Season: Reclamation",
+  "name_de": "Saison: Revindikation",
+  "startDate": "1970-01-01"
+ },
+ "v910": {
+  "seasonNumber": 27,
+  "name": "Season: Reclamation",
+  "name_de": "Saison: Revindikation",
+  "startDate": "1970-01-01"
+ },
+ "v950": {
+  "seasonNumber": 28,
+  "name": "Season 28: Lawless",
+  "name_de": "Saison 28: Gesetzlos",
+  "startDate": "1970-01-01"
+ }
+}

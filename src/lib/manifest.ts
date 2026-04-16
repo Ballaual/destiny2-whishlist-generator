@@ -33,6 +33,8 @@ export interface DestinyItemDefinition {
     ammoType: number;
   };
   itemTypeDisplayName?: string;
+  seasonHash?: number;
+  traitIds?: string[];
   sockets?: {
     socketEntries: readonly DestinyItemSocketEntryDefinition[];
     socketCategories: readonly {
@@ -65,11 +67,21 @@ export interface DestinySocketCategoryDefinition {
 
 export type SearchIndex = Record<number, { en: string; de: string }>;
 
+export interface ReleaseDefinition {
+  seasonNumber: number;
+  name: string;
+  name_de: string;
+  startDate?: string;
+}
+
+export type ReleaseMap = Record<string, ReleaseDefinition>;
+
 export interface ManifestData {
   items: Record<string, DestinyItemDefinition>;
   plugSets: Record<string, DestinyPlugSetDefinition>;
   socketCategories: Record<string, DestinySocketCategoryDefinition>;
   searchIndex: SearchIndex;
+  releases: ReleaseMap;
 }
 
 // Resolve the base URL for manifest files.
@@ -156,11 +168,12 @@ export async function loadManifest(
           const plugSets = await manifestCache.getItem<Record<string, DestinyPlugSetDefinition>>('plugSets');
           const socketCategories = await manifestCache.getItem<Record<string, DestinySocketCategoryDefinition>>('socketCategories');
           const searchIndex = await manifestCache.getItem<SearchIndex>('searchIndex');
+          const releases = await manifestCache.getItem<ReleaseMap>('releases') || {};
 
           if (items && plugSets && socketCategories && searchIndex) {
               console.log(`[Manifest v5] Loaded from cache (${lang}). Version: ${cachedVersion}. Items: ${Object.keys(items).length}`);
               if (onProgress) onProgress(100);
-              return { items, plugSets, socketCategories, searchIndex };
+              return { items, plugSets, socketCategories, searchIndex, releases };
           }
           console.warn("[Manifest v5] Cache partial or corrupt. Refetching...");
       }
@@ -175,22 +188,23 @@ export async function loadManifest(
       const secondaryLang = lang === 'en' ? 'de' : 'en';
 
       onStatus?.(lang === 'de' ? 'Lade Datenbank...' : 'Downloading database...');
-      const [itemsMainRaw, itemsSecondaryRaw, plugSetsRaw, socketCatsRaw] = await Promise.all([
+      const [itemsMainRaw, itemsSecondaryRaw, plugSetsRaw, socketCatsRaw, releasesRaw] = await Promise.all([
           fetchWithProgress<any>(`${MANIFEST_BASE}/items_${mainLang}.json`, (p) => {
-              onProgress?.(5 + p * 0.45);
+              onProgress?.(5 + p * 0.40);
               if (p > 0 && p < 100) onStatus?.(lang === 'de' ? `Lade Items (${mainLang.toUpperCase()})... (${Math.round(p)}%)` : `Downloading Items (${mainLang.toUpperCase()})... (${Math.round(p)}%)`);
           }),
           fetchWithProgress<any>(`${MANIFEST_BASE}/items_${secondaryLang}.json`, (p) => {
-              onProgress?.(50 + p * 0.2);
+              onProgress?.(45 + p * 0.20);
               if (p > 0 && p < 100) onStatus?.(lang === 'de' ? `Lade Items (${secondaryLang.toUpperCase()})... (${Math.round(p)}%)` : `Downloading Items (${secondaryLang.toUpperCase()})... (${Math.round(p)}%)`);
           }),
           fetchWithProgress<any>(`${MANIFEST_BASE}/plugsets.json`, (p) => {
-              onProgress?.(70 + p * 0.15);
+              onProgress?.(65 + p * 0.15);
               if (p > 0 && p < 100) onStatus?.(lang === 'de' ? `Lade Perks... (${Math.round(p)}%)` : `Downloading Perks... (${Math.round(p)}%)`);
           }),
           fetchWithProgress<any>(`${MANIFEST_BASE}/socket_categories.json`, (p) => {
-              onProgress?.(85 + p * 0.05);
+              onProgress?.(80 + p * 0.05);
           }),
+          fetchWithProgress<any>(`${MANIFEST_BASE}/releases.json`).catch(() => ({})),
       ]);
 
       onStatus?.(lang === 'de' ? 'Normalisiere Daten...' : 'Normalizing data...');
@@ -246,6 +260,7 @@ export async function loadManifest(
           manifestCache.setItem('plugSets', normalizedPlugSets),
           manifestCache.setItem('socketCategories', normalizedSocketCategories),
           manifestCache.setItem('searchIndex', newSearchIndex),
+          manifestCache.setItem('releases', releasesRaw || {}),
           manifestCache.setItem('manifest_version', remoteVersion || 'unknown'),
           manifestCache.setItem('manifest_schema_version', SCHEMA_VERSION),
           manifestCache.setItem('manifest_lang', lang)
@@ -256,7 +271,8 @@ export async function loadManifest(
           items: normalizedItems, 
           plugSets: normalizedPlugSets, 
           socketCategories: normalizedSocketCategories,
-          searchIndex: newSearchIndex 
+          searchIndex: newSearchIndex,
+          releases: releasesRaw || {}
       };
     } catch (error: any) {
       console.error("[Manifest Error]", error);

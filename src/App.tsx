@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { loadManifest } from './lib/manifest';
-import type { DestinyItemDefinition, DestinyPlugSetDefinition } from './lib/manifest';
+import type { DestinyItemDefinition, DestinyPlugSetDefinition, ReleaseMap } from './lib/manifest';
 import { WeaponSearch } from './components/WeaponSearch';
 import { PerkSelector } from './components/PerkSelector';
 import { WishlistManager } from './components/WishlistManager';
@@ -255,6 +255,7 @@ function App() {
   const [plugSets, setPlugSets] = useState<Record<string, DestinyPlugSetDefinition>>({});
   const [socketCategories, setSocketCategories] = useState<Record<string, any>>({});
   const [searchIndex, setSearchIndex] = useState<Record<number, { en: string; de: string }>>({});
+  const [releases, setReleases] = useState<ReleaseMap>({});
 
   const [selectedWeaponHash, setSelectedWeaponHash] = useState<number | null>(() => {
     const saved = localStorage.getItem('d2_wishlist_selected_hash');
@@ -469,6 +470,7 @@ function App() {
           setPlugSets(data.plugSets || {});
           setSocketCategories(data.socketCategories || {});
           setSearchIndex(data.searchIndex || {});
+          setReleases(data.releases || {});
         }
       } catch (err: any) {
         clearInterval(ticker);
@@ -1061,6 +1063,41 @@ function App() {
                             <strong>{t.sourceLabel}:</strong> {selectedWeapon.displaySource}
                           </div>
                         )}
+
+                        {/* Season / Release Badge from traitIds + releases.json */}
+                        {(() => {
+                          const weapon = selectedWeapon as any;
+                          const releaseTrait: string | undefined = weapon.traitIds?.find((t: string) => t.startsWith('releases.'));
+                          if (!releaseTrait) return null;
+                          // Extract vXXX key: "releases.v950.core" -> "v950"
+                          const vKey = releaseTrait.match(/releases\.(v\d+)/)?.[1];
+                          if (!vKey) return null;
+                          const rel = releases[vKey];
+                          const seasonNum = rel?.seasonNumber;
+                          const seasonName = rel ? (lang === 'de' ? rel.name_de : rel.name) : null;
+                          return (
+                            <div style={{
+                              marginTop: '0.6rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.4rem',
+                              background: 'rgba(168, 85, 247, 0.12)',
+                              border: '1px solid rgba(168, 85, 247, 0.25)',
+                              borderRadius: '6px',
+                              padding: '0.25rem 0.65rem',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              color: '#c084fc',
+                              letterSpacing: '0.03em',
+                            }}>
+                              <span style={{ fontSize: '0.8rem' }}>🗓</span>
+                              <span>
+                                {seasonNum ? `S${seasonNum}` : vKey}
+                                {seasonName ? ` – ${seasonName}` : ''}
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* Sortable Selected Perks List - Grouped by Column */}
