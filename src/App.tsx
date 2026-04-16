@@ -1126,7 +1126,9 @@ function App() {
                                   const perkItem = items[(hash >>> 0).toString()];
                                   if (!perkItem) return null;
                                   const perkName = perkItem.displayProperties?.name || 'Unknown';
+                                  const typeDisplayName = (perkItem.itemTypeDisplayName || '').toLowerCase();
                                   const isEnhanced = perkItem.tooltipNotifications?.some((n: any) => n.displayStyle === "ui_display_style_enhanced_perk") ||
+                                    typeDisplayName.includes('enhanced') || typeDisplayName.includes('verbessert') ||
                                     perkItem.itemCategoryHashes?.includes(2237026461) || false;
                                   const isDragging = dragInfo?.columnIndex === group.columnIndex && dragInfo?.fromIdx === idx;
                                   const isDragOver = dragOverInfo?.columnIndex === group.columnIndex && dragOverInfo?.overIdx === idx;
