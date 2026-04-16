@@ -408,6 +408,23 @@ export function isValidWishlistPlug(item: DestinyItemDefinition | null | undefin
   return true;
 }
 
+/**
+ * Helper to identify if a plug is an Origin Trait.
+ */
+export function isOriginTrait(hash: number, items: Record<string, DestinyItemDefinition>): boolean {
+  const p = items[hash.toString()];
+  if (!p) return false;
+  const typeDisplayName = (p.itemTypeDisplayName || '').toLowerCase();
+  const name = (p.displayProperties?.name || '').toLowerCase();
+  
+  return (
+    typeDisplayName.includes('origin trait') || 
+    typeDisplayName.includes('ursprungsattribut') ||
+    p.itemCategoryHashes?.includes(2779167812) || // Origin Traits category
+    name.includes('origin trait')
+  );
+}
+
 
 /**
  * Groups a flat list of perk hashes into columns (sockets) based on the weapon's definition.

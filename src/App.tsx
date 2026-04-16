@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { loadManifest, groupPerksBySocket, isMasterwork, isEnhancedPerk, isValidWishlistPlug } from './lib/manifest';
+import { loadManifest, groupPerksBySocket, isMasterwork, isEnhancedPerk, isValidWishlistPlug, isOriginTrait } from './lib/manifest';
 
 
 import type { DestinyItemDefinition, DestinyPlugSetDefinition, ReleaseMap } from './lib/manifest';
@@ -652,6 +652,10 @@ function App() {
     setEntryDescription('');
   };
 
+  const cartesianProduct = <T,>(arrays: T[][]): T[][] => {
+    return arrays.reduce((a, b) => a.flatMap(d => b.map(e => [...d, e])), [[]] as T[][]);
+  };
+
   const handleExport = (format: string) => {
     if (wishlistEntries.length === 0) return;
     let content = '';
@@ -665,13 +669,13 @@ function App() {
           ...e,
           perkHashes: groupPerksBySocket(e.itemHash, e.perkHashes, { items, plugSets })
         }));
-        content = JSON.stringify({ 
-          source: 'D2WLG', 
-          name: wishlistName, 
-          description: wishlistDescription, 
-          version: '1.2', 
-          exportedAt: new Date().toISOString(), 
-          entries: exportedEntries 
+        content = JSON.stringify({
+          source: 'D2WLG',
+          name: wishlistName,
+          description: wishlistDescription,
+          version: '1.2',
+          exportedAt: new Date().toISOString(),
+          entries: exportedEntries
         }, null, 2);
 
       } else if (format === 'littlelight') {
@@ -701,31 +705,46 @@ function App() {
         const entries = wishlistEntries.map(entry => {
           const weapon = items[(entry.itemHash >>> 0).toString()];
           const weaponName = weapon?.displayProperties?.name || "Unknown Weapon";
-          const comments = [];
-          if (entry.name) comments.push(entry.name);
-          if (entry.description) comments.push(entry.description);
-          if (entry.notes) comments.push(entry.notes);
 
           const tagsStr = entry.tags && entry.tags.length > 0 ? entry.tags.map(t => t.toLowerCase()).join(',') : "";
-          const notesStr = (tagsStr ? `tags:${tagsStr}${comments.length ? `, ${comments.join(' - ')}` : ''}` : (comments.length ? comments.join(' - ') : '')).replace(/\r?\n/g, ' ').trim();
-          
-          const commentPrefix = entry.name ? `${entry.name} [${weaponName}]` : weaponName;
-          
+          const headerLine = `// ${weaponName}${entry.name ? ` - ${entry.name}` : ''}${tagsStr ? ` (${tagsStr})` : ''}`;
+
+          const comments = [];
+          if (entry.description) comments.push(entry.description);
+          if (entry.notes) comments.push(entry.notes);
+          const notesStr = `${comments.join(' ')} ${tagsStr ? `tags:${tagsStr}` : ''}`.replace(/\r?\n/g, ' ').trim();
+
           // Use groupPerksBySocket to maintain the correct column-based order
           const grouped = groupPerksBySocket(entry.itemHash, entry.perkHashes, { items, plugSets });
-          const flatPerks = grouped.flat();
-          
-          // Filter out Masterworks and Enhanced perks for DIM (it usually wants base perks)
-          // Also ensure they are valid wishlist plugs (filters out trackers, etc.)
-          const filteredPerks = flatPerks.filter(p => {
-            const it = items[p.toString()];
-            return it && isValidWishlistPlug(it) && !isMasterwork(p, items) && !isEnhancedPerk(p, items);
+
+          // Process each column to filter perks
+          const filteredGroups = grouped.map(column => {
+            return column.filter(p => {
+              const it = items[p.toString()];
+              if (!it || !isValidWishlistPlug(it)) return false;
+
+              const isMw = isMasterwork(p, items);
+              const isOT = isOriginTrait(p, items);
+              const isEnhanced = isEnhancedPerk(p, items);
+
+              // Exclude Masterworks.
+              if (isMw) return false;
+
+              // Keep if it's an origin trait (even if enhanced), 
+              // OR a regular valid perk that is NOT enhanced.
+              return isOT || !isEnhanced;
+            });
+          }).filter(col => col.length > 0);
+
+          // Generate combinations (Cartesian product)
+          const combinations = cartesianProduct(filteredGroups);
+
+          // Format each combination as a dimwishlist line
+          const wishlistLines = combinations.map(combo => {
+            return `dimwishlist:item=${entry.itemHash}&perks=${combo.join(',')}`;
           });
-          
-          // Ensure uniqueness
-          const perksToExport = Array.from(new Set(filteredPerks));
-          
-          return `// ${commentPrefix}${tagsStr ? ` (${tagsStr})` : ''}\n//notes: ${notesStr}\ndimwishlist:item=${entry.itemHash}${perksToExport.length > 0 ? `&perks=${perksToExport.join(',')}` : ''}`;
+
+          return `${headerLine}\n//notes:${notesStr}\n${wishlistLines.join('\n')}`;
         }).join('\n\n');
         content = header + entries;
         mimeType = 'text/plain';
