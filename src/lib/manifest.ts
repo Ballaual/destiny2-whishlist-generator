@@ -294,6 +294,19 @@ export async function getManifestData() {
 }
 
 /**
+ * Helper to identify if a plug is a Masterwork (Tier/Meisterwerk).
+ */
+export function isMasterwork(hash: number, items: Record<string, DestinyItemDefinition>): boolean {
+  const p = items[hash.toString()];
+  if (!p) return false;
+  const pName = p.displayProperties?.name?.toLowerCase() || '';
+  const pType = p.itemTypeDisplayName?.toLowerCase() || '';
+  return pName.includes('masterwork') || pName.includes('meisterwerk') ||
+         /\b(tier|stufe)\b/.test(pName) ||
+         pType.includes('masterwork') || pType.includes('meisterwerk');
+}
+
+/**
  * Groups a flat list of perk hashes into columns (sockets) based on the weapon's definition.
  */
 export function groupPerksBySocket(
@@ -345,19 +358,8 @@ export function groupPerksBySocket(
 
   return Array.from(groups.entries())
     .sort(([a, aHashes], [b, bHashes]) => {
-      const isMW = (hashes: number[]) => {
-        return hashes.some(h => {
-          const p = manifest.items[h.toString()];
-          const pName = p?.displayProperties?.name?.toLowerCase() || '';
-          const pType = p?.itemTypeDisplayName?.toLowerCase() || '';
-          return pName.includes('masterwork') || pName.includes('meisterwerk') ||
-                 /\b(tier|stufe)\b/.test(pName) ||
-                 pType.includes('masterwork') || pType.includes('meisterwerk');
-        });
-      };
-
-      const aIsMw = isMW(aHashes);
-      const bIsMw = isMW(bHashes);
+      const aIsMw = aHashes.some(h => isMasterwork(h, manifest.items));
+      const bIsMw = bHashes.some(h => isMasterwork(h, manifest.items));
 
       if (aIsMw && !bIsMw) return 1;
       if (!aIsMw && bIsMw) return -1;
@@ -365,5 +367,6 @@ export function groupPerksBySocket(
     })
     .map(([_, hashes]) => hashes);
 }
+
 
 
