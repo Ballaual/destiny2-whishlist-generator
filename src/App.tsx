@@ -444,8 +444,25 @@ function App() {
       setLoading(true);
       setError(null);
       setProgress(0);
+
+      // Simulated progress ticker — advances slowly while loading,
+      // so the bar always visibly moves even without content-length headers.
+      let simProgress = 0;
+      const ticker = setInterval(() => {
+        simProgress = Math.min(simProgress + 1, 90);
+        setProgress(simProgress);
+      }, 80);
+
       try {
-        const data = await loadManifest(lang, (p) => setProgress(p), (s) => setStatus(s));
+        // Real progress from manifest (may override simulated value if content-length is available)
+        const data = await loadManifest(lang, (p) => {
+          if (p > simProgress) {
+            simProgress = p;
+            setProgress(p);
+          }
+        }, (s) => setStatus(s));
+        clearInterval(ticker);
+        setProgress(100);
         if (data) {
           console.log(`[App] DATA VERIFIED (${lang}): ${Object.keys(data.items).length} items`);
           setItems(data.items || {});
@@ -454,6 +471,7 @@ function App() {
           setSearchIndex(data.searchIndex || {});
         }
       } catch (err: any) {
+        clearInterval(ticker);
         console.error("Manifest Load Error:", err);
         setError(err.message);
       } finally {
@@ -952,6 +970,7 @@ function App() {
                       items={items}
                       plugSets={plugSets}
                       socketCategories={socketCategories}
+                      searchIndex={searchIndex}
                       selectedPerks={selectedPerks}
                       onTogglePerk={handleTogglePerk}
                       lang={lang}

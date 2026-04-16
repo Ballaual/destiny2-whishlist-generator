@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { Search, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import type { DestinyItemDefinition, DestinyPlugSetDefinition, DestinySocketCategoryDefinition } from '../lib/manifest';
+import type { DestinyItemDefinition, DestinyPlugSetDefinition, DestinySocketCategoryDefinition, SearchIndex } from '../lib/manifest';
 
 interface PerkSelectorProps {
   weapon: DestinyItemDefinition;
   items: Record<string, DestinyItemDefinition>;
   plugSets: Record<string, DestinyPlugSetDefinition>;
   socketCategories: Record<string, DestinySocketCategoryDefinition>;
+  searchIndex?: SearchIndex;
   selectedPerks: number[];
   onTogglePerk: (hash: number) => void;
   lang?: 'en' | 'de';
@@ -14,8 +16,9 @@ interface PerkSelectorProps {
 
 // No longer using ID blacklisting as requested. All filtering is now content-based.
 
-export function PerkSelector({ weapon, items, plugSets, socketCategories, selectedPerks, onTogglePerk, lang = 'en' }: PerkSelectorProps) {
+export function PerkSelector({ weapon, items, plugSets, socketCategories, searchIndex, selectedPerks, onTogglePerk, lang = 'en' }: PerkSelectorProps) {
   const [hoveredPerk, setHoveredPerk] = useState<any>(null);
+  const [perkSearch, setPerkSearch] = useState('');
 
   const handleMouseEnter = (e: React.MouseEvent, perk: any, isEnhanced: boolean) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -203,10 +206,59 @@ export function PerkSelector({ weapon, items, plugSets, socketCategories, select
     );
   }
 
+  const perkSearchLower = perkSearch.trim().toLowerCase();
+
+  const visibleColumns = useMemo(() => {
+    if (!perkSearchLower) return perkColumns;
+    return perkColumns.map(col => ({
+      ...col,
+      plugs: col.plugs.filter((p: any) => {
+        const primaryName = (p.displayProperties?.name || '').toLowerCase();
+        if (primaryName.includes(perkSearchLower)) return true;
+        // Also search the alternate language name from the search index
+        if (searchIndex) {
+          const entry = searchIndex[p.hash >>> 0];
+          if (entry) {
+            const altName = (lang === 'de' ? entry.en : entry.de).toLowerCase();
+            if (altName.includes(perkSearchLower)) return true;
+          }
+        }
+        return false;
+      })
+    })).filter(col => col.plugs.length > 0);
+  }, [perkColumns, perkSearchLower, searchIndex, lang]);
+
   return (
     <div className="card glass-panel">
+      {/* Perk Search */}
+      <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
+        <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', pointerEvents: 'none' }} />
+        <input
+          id="perk-search-input"
+          type="text"
+          className="input-primary"
+          placeholder={lang === 'de' ? 'Perk suchen...' : 'Search perks...'}
+          value={perkSearch}
+          onChange={e => setPerkSearch(e.target.value)}
+          style={{ width: '100%', padding: '0.55rem 2.25rem', fontSize: '0.85rem', boxSizing: 'border-box' }}
+        />
+        {perkSearch && (
+          <button
+            onClick={() => setPerkSearch('')}
+            style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'transparent', color: 'var(--text-secondary)', padding: 0, lineHeight: 1 }}
+            title={lang === 'de' ? 'Suche leeren' : 'Clear search'}
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+      {perkSearchLower && visibleColumns.length === 0 && (
+        <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '1.5rem', fontSize: '0.85rem' }}>
+          {lang === 'de' ? 'Kein Perk gefunden.' : 'No perks found.'}
+        </div>
+      )}
       <div className="perk-grid">
-        {perkColumns.map((col: any, colIdx: number) => {
+        {visibleColumns.map((col: any, colIdx: number) => {
           const firstPlug = col.plugs[0];
           let headerText = firstPlug?.itemTypeDisplayName?.replace(/^Item:\s*/i, '') || (lang === 'de' ? 'Perk' : 'Perk');
 
