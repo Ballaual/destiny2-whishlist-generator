@@ -12,6 +12,7 @@ export interface WishlistEntry {
   description?: string;
 }
 
+
 interface WishlistManagerProps {
   entries: WishlistEntry[];
   items: Record<string, DestinyItemDefinition>;
@@ -32,6 +33,7 @@ interface WishlistManagerProps {
   };
   searchIndex?: Record<number, { en: string; de: string }>;
 }
+
 
 export function WishlistManager({ 
   entries, items, lang, onExport, onImport, onRemove, onCopy, onSelectEntry, 
@@ -294,6 +296,8 @@ export function WishlistManager({
                         <div className="wishlist-entry-default-meta" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {entry.perkHashes.length} Perks {(entry.notes || entry.description) && `• ${entry.notes || entry.description}`}
                         </div>
+
+
                         {entry.tags && entry.tags.length > 0 && (
                           <div className="wishlist-entry-tags" style={{ gap: '0.25rem', flexWrap: 'wrap' }}>
                             {entry.tags.map(tag => (

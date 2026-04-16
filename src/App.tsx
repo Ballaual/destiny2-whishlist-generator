@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { loadManifest } from './lib/manifest';
+import { loadManifest, groupPerksBySocket } from './lib/manifest';
 import type { DestinyItemDefinition, DestinyPlugSetDefinition, ReleaseMap } from './lib/manifest';
+
 import { WeaponSearch } from './components/WeaponSearch';
 import { PerkSelector } from './components/PerkSelector';
 import { WishlistManager } from './components/WishlistManager';
@@ -332,8 +333,20 @@ function App() {
   }, [selectedPerks, perkToColumn, items, lang]);
   const [wishlistEntries, setWishlistEntries] = useState<WishlistEntry[]>(() => {
     const saved = localStorage.getItem('d2_wishlist_entries');
-    return saved ? JSON.parse(saved) : [];
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      return parsed.map((e: any) => ({
+        ...e,
+        // Ensure flat internal state
+        perkHashes: (e.perkHashes && Array.isArray(e.perkHashes[0])) ? e.perkHashes.flat() : (e.perkHashes || [])
+      }));
+    } catch {
+      return [];
+    }
   });
+
+
   const [notes, setNotes] = useState(() => {
     return localStorage.getItem('d2_wishlist_notes') || '';
   });
@@ -612,6 +625,8 @@ function App() {
         name: entryName.trim(),
         description: entryDescription.trim()
       };
+
+
       setWishlistEntries(newEntries);
       setEditingIndex(null);
     } else {
@@ -623,6 +638,8 @@ function App() {
         name: entryName.trim(),
         description: entryDescription.trim()
       }]);
+
+
     }
 
     setSelectedWeaponHash(null);
@@ -642,7 +659,19 @@ function App() {
 
     try {
       if (format === 'internal') {
-        content = JSON.stringify({ source: 'D2WLG', name: wishlistName, description: wishlistDescription, version: '1.0', exportedAt: new Date().toISOString(), entries: wishlistEntries }, null, 2);
+        const exportedEntries = wishlistEntries.map(e => ({
+          ...e,
+          perkHashes: groupPerksBySocket(e.itemHash, e.perkHashes, { items, plugSets })
+        }));
+        content = JSON.stringify({ 
+          source: 'D2WLG', 
+          name: wishlistName, 
+          description: wishlistDescription, 
+          version: '1.2', 
+          exportedAt: new Date().toISOString(), 
+          entries: exportedEntries 
+        }, null, 2);
+
       } else if (format === 'littlelight') {
         const littleLightData = {
           name: wishlistName || 'D2WLG',
@@ -652,9 +681,11 @@ function App() {
               name: entry.name || "",
               description: entry.description || entry.notes || "",
               hash: entry.itemHash,
-              plugs: entry.perkHashes.map(h => [h]),
+              plugs: groupPerksBySocket(entry.itemHash, entry.perkHashes, { items, plugSets }),
               tags: entry.tags && entry.tags.length > 0 ? entry.tags : []
             };
+
+
           })
         };
         content = JSON.stringify(littleLightData, null, 2);
@@ -674,6 +705,8 @@ function App() {
 
           const commentPrefix = entry.name ? `${entry.name} [${weaponName}]` : weaponName;
           return `// ${commentPrefix}${tagsStr ? ` (${tagsStr})` : ''}\n//notes: ${notesStr}\ndimwishlist:item=${entry.itemHash}${entry.perkHashes.length > 0 ? `&perks=${entry.perkHashes.join(',')}` : ''}`;
+
+
         }).join('\n\n');
         content = header + entries;
         mimeType = 'text/plain';
@@ -689,6 +722,8 @@ function App() {
           });
           const perksStr = perkNames.join(' | ');
           const perkHashesStr = entry.perkHashes.join('|');
+
+
           const tagsStr = entry.tags?.join(' | ') || '';
           const notesStr = entry.notes?.replace(/"/g, '""') || '';
           const nameStr = entry.name?.replace(/"/g, '""') || '';
@@ -721,9 +756,12 @@ function App() {
     setWishlistEntries(prev => {
       const combined = [...prev];
       for (const entry of data.entries) {
-        const exists = combined.some(e => e.itemHash === entry.itemHash && JSON.stringify(e.perkHashes.sort()) === JSON.stringify(entry.perkHashes.sort()));
+        const perksStr = entry.perkHashes.sort().join(',');
+        const exists = combined.some(e => e.itemHash === entry.itemHash && e.perkHashes.sort().join(',') === perksStr);
         if (!exists) combined.push(entry);
       }
+
+
       return combined;
     });
   };
@@ -731,6 +769,8 @@ function App() {
   const handleSelectEntry = (entry: WishlistEntry) => {
     setSelectedWeaponHash(entry.itemHash);
     setSelectedPerks([...entry.perkHashes]);
+
+
     setSelectedTags(entry.tags || []);
     setNotes(entry.notes || '');
     setEntryName(entry.name || '');

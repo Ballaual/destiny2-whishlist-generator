@@ -12,17 +12,31 @@ export interface WishlistImportResult {
 export function parseD2WLG(content: string): WishlistImportResult {
   const data = JSON.parse(content);
   if (data.entries && Array.isArray(data.entries)) {
+    const entries = data.entries.map((e: any) => ({
+      ...e,
+      // Flatten if nested
+      perkHashes: (e.perkHashes && Array.isArray(e.perkHashes[0])) 
+        ? e.perkHashes.flat() 
+        : (e.perkHashes || [])
+    }));
     return {
-      entries: data.entries,
+      entries,
       name: data.name,
       description: data.description
     };
   }
   if (Array.isArray(data)) {
-    return { entries: data };
+    const entries = data.map((e: any) => ({
+      ...e,
+      perkHashes: (e.perkHashes && Array.isArray(e.perkHashes[0])) 
+        ? e.perkHashes.flat() 
+        : (e.perkHashes || [])
+    }));
+    return { entries };
   }
   throw new Error('Invalid D2WLG format');
 }
+
 
 /**
  * Parses a Little Light (JSON) wishlist.
@@ -35,11 +49,12 @@ export function parseLittleLight(content: string): WishlistImportResult {
 
   const entries: WishlistEntry[] = data.data.map((item: any) => ({
     itemHash: item.hash,
-    perkHashes: (item.plugs || []).flat(),
+    perkHashes: (item.plugs || []).flat(), // Flatten Little Light
     name: item.name || '',
     description: item.description || '',
     tags: item.tags || []
   }));
+
 
   return {
     entries,
@@ -47,6 +62,7 @@ export function parseLittleLight(content: string): WishlistImportResult {
     description: data.description
   };
 }
+
 
 /**
  * Parses a DIM (Text) wishlist.
@@ -118,6 +134,8 @@ export function parseDIM(content: string): WishlistImportResult {
         tags: currentEntry.tags,
         name: currentEntry.name
       };
+
+
       entries.push(entry);
       currentEntry = {}; // reset for next item
     }
@@ -177,6 +195,8 @@ export function parseCSV(content: string): WishlistImportResult {
       name: nameIdx !== -1 ? clean(row[nameIdx]) : '',
       description: descIdx !== -1 ? clean(row[descIdx]) : ''
     });
+
+
   }
 
   return { entries };

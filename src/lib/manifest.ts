@@ -292,3 +292,78 @@ export async function getManifestData() {
       socketCategories: socketCategories || {} 
     };
 }
+
+/**
+ * Groups a flat list of perk hashes into columns (sockets) based on the weapon's definition.
+ */
+export function groupPerksBySocket(
+  itemHash: number, 
+  flatPerkHashes: number[], 
+  manifest: { 
+    items: Record<string, DestinyItemDefinition>, 
+    plugSets: Record<string, DestinyPlugSetDefinition> 
+  }
+): number[][] {
+  const item = manifest.items[itemHash.toString()];
+  if (!item?.sockets?.socketEntries) return flatPerkHashes.length > 0 ? [flatPerkHashes] : [];
+
+  const perkToColumn = new Map<number, number>();
+  item.sockets.socketEntries.forEach((entry, idx) => {
+    const hashes: number[] = [];
+    
+    const getPlugSet = (hash: number | undefined) => {
+      if (!hash) return null;
+      return manifest.plugSets[hash.toString()];
+    };
+
+    if (entry.randomizedPlugSetHash) {
+      const set = getPlugSet(entry.randomizedPlugSetHash);
+      if (set?.reusablePlugItems) hashes.push(...set.reusablePlugItems.map(p => p.plugItemHash));
+    }
+    if (entry.reusablePlugSetHash) {
+      const set = getPlugSet(entry.reusablePlugSetHash);
+      if (set?.reusablePlugItems) hashes.push(...set.reusablePlugItems.map(p => p.plugItemHash));
+    }
+    if (entry.reusablePlugItems) {
+      hashes.push(...entry.reusablePlugItems.map(p => p.plugItemHash));
+    }
+    if (entry.singleInitialItemHash) {
+      hashes.push(entry.singleInitialItemHash);
+    }
+    
+    for (const h of hashes) {
+      if (!perkToColumn.has(h)) perkToColumn.set(h, idx);
+    }
+  });
+
+  const groups: Map<number, number[]> = new Map();
+  for (const h of flatPerkHashes) {
+    const col = perkToColumn.get(h) ?? -1;
+    if (!groups.has(col)) groups.set(col, []);
+    groups.get(col)!.push(h);
+  }
+
+  return Array.from(groups.entries())
+    .sort(([a, aHashes], [b, bHashes]) => {
+      const isMW = (hashes: number[]) => {
+        return hashes.some(h => {
+          const p = manifest.items[h.toString()];
+          const pName = p?.displayProperties?.name?.toLowerCase() || '';
+          const pType = p?.itemTypeDisplayName?.toLowerCase() || '';
+          return pName.includes('masterwork') || pName.includes('meisterwerk') ||
+                 /\b(tier|stufe)\b/.test(pName) ||
+                 pType.includes('masterwork') || pType.includes('meisterwerk');
+        });
+      };
+
+      const aIsMw = isMW(aHashes);
+      const bIsMw = isMW(bHashes);
+
+      if (aIsMw && !bIsMw) return 1;
+      if (!aIsMw && bIsMw) return -1;
+      return a - b;
+    })
+    .map(([_, hashes]) => hashes);
+}
+
+
