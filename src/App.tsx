@@ -1275,13 +1275,13 @@ function App() {
                       )}
 
                       {(() => {
-                        const standardTags = ['GodPvE', 'GodPvP', 'PvE', 'PvP', 'Mouse', 'Controller'];
+                        const standardTags = ['GodPVE', 'GodPVP', 'PVE', 'PVP', 'Mouse', 'Controller'];
                         const standardTagsLower = standardTags.map(t => t.toLowerCase());
                         const extraTags = selectedTags.filter(t => !standardTagsLower.includes(t.toLowerCase()));
                         return (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.5rem' }}>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                              {['GodPvE', 'GodPvP', 'PvE', 'PvP'].map(tag => (
+                              {['GodPVE', 'GodPVP', 'PVE', 'PVP'].map(tag => (
                                 <button
                                   key={tag}
                                   onClick={() => handleToggleTag(tag)}
